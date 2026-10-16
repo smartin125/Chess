@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary: #4a90e2;
+            --text: #333333;
+            --border: #dddddd;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        h1 {
+            margin-top: 0;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            flex: 2;
+        }
+
+        input[type="number"] {
+            flex: 1;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .error-msg {
+            color: #d9534f;
+            font-size: 13px;
+            margin-top: -15px;
+            margin-bottom: 15px;
+            min-height: 18px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .rank-col { width: 15%; text-align: center; }
+        .name-col { width: 55%; }
+        .score-col { width: 30%; text-align: right; }
+
+        td.score-col input {
+            width: 70px;
+            text-align: right;
+            padding: 4px 8px;
+            font-size: 14px;
+            border: 1px solid transparent;
+            background: transparent;
+        }
+
+        td.score-col input:focus {
+            border-color: var(--primary);
+            background: white;
+            outline: none;
+            border-radius: 4px;
+        }
+        
+        .actions-cell {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #d9534f;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏆 Leaderboard</h1>
+    
+    <div class="form-group">
+        <input type="text" id="playerName" placeholder="Player Name" autocomplete="off">
+        <input type="number" id="playerScore" placeholder="Score (0)">
+        <button onclick="addPlayer()">Add</button>
+    </div>
+    <div id="errorMsg" class="error-msg"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="rank-col">Rank</th>
+                <th class="name-col">Name</th>
+                <th class="score-col" style="text-align: right;">Score</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+            <!-- Rows injected by JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Load existing data or initialize empty array
+    let players = JSON.parse(localStorage.getItem('leaderboard')) || [];
+
+    // Initial render
+    renderLeaderboard();
+
+    function renderLeaderboard() {
+        // Sort players descending by score
+        players.sort((a, b) => b.score - a.score);
+        
+        // Save to localStorage
+        localStorage.setItem('leaderboard', JSON.stringify(players));
+
+        const tbody = document.getElementById('leaderboardBody');
+        tbody.innerHTML = '';
+
+        players.forEach((player, index) => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td class="rank-col">${index + 1}</td>
+                <td class="name-col">${escapeHtml(player.name)}</td>
+                <td class="score-col">
+                    <div class="actions-cell">
+                        <input type="number" 
+                               value="${player.score}" 
+                               onchange="updateScore('${escapeQuotes(player.name)}', this.value)"
+                               onkeydown="if(event.key==='Enter') this.blur()">
+                        <button class="delete-btn" onclick="deletePlayer('${escapeQuotes(player.name)}')">✕</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function addPlayer() {
+        const nameInput = document.getElementById('playerName');
+        const scoreInput = document.getElementById('playerScore');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        const name = nameInput.value.trim();
+        // Default to 0 if left blank
+        const score = scoreInput.value === '' ? 0 : parseInt(scoreInput.value, 10);
+
+        errorMsg.textContent = '';
+
+        if (!name) {
+            errorMsg.textContent = 'Please enter a name.';
+            return;
+        }
+
+        // Check for duplicate names (case-insensitive)
+        const nameExists = players.some(p => p.name.toLowerCase() === name.toLowerCase());
+        if (nameExists) {
+            errorMsg.textContent = 'This player name already exists.';
+            return;
+        }
+
+        // Add player and reset form
+        players.push({ name, score });
+        nameInput.value = '';
+        scoreInput.value = '';
+        
+        renderLeaderboard();
+    }
+
+    function updateScore(name, newScore) {
+        const scoreValue = newScore === '' ? 0 : parseInt(newScore, 10);
+        
+        const player = players.find(p => p.name === name);
+        if (player) {
+            player.score = scoreValue;
+            renderLeaderboard();
+        }
+    }
+
+    function deletePlayer(name) {
+        players = players.filter(p => p.name !== name);
+        renderLeaderboard();
+    }
+
+    // Helper functions to prevent XSS and formatting bugs
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+    function escapeQuotes(str) {
+        return str.replace(/'/g, "\\'");
+    }
+</script>
+
+</body>
+</html>
