@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ladder Leaderboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            display: flex;
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex: 1;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 4px 0;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Left Panel: Match Results Entry -->
+    <div class="panel">
+        <h2>Enter Match Result</h2>
+        <form id="matchForm">
+            <div class="form-group">
+                <label for="name1">Player 1 Name:</label>
+                <input type="text" id="name1" required style="width: 100%;">
+            </div>
+            <div class="form-group">
+                <label for="result">Result (Relative to Player 1):</label>
+                <select id="result" style="width: 100%;">
+                    <option value="win">Player 1 Wins</option>
+                    <option value="draw">Draw</option>
+                    <option value="loss">Player 2 Wins</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="name2">Player 2 Name:</label>
+                <input type="text" id="name2" required style="width: 100%;">
+            </div>
+            <button type="submit" style="width: 100%;">Submit Result</button>
+        </form>
+
+        <h3 style="margin-top: 30px;">Recent Matches</h3>
+        <table id="historyTable">
+            <thead>
+                <tr>
+                    <th>Player 1</th>
+                    <th>Result</th>
+                    <th>Player 2</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Match history items dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Right Panel: Ladder Leaderboard -->
+    <div class="panel">
+        <h2>Ladder Leaderboard</h2>
+        <table id="leaderboardTable">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">Rank</th>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Ladder items dynamically inserted here -->
+            </tbody>
+        </table>
+        <button id="resetBtn" style="background-color: #dc3545;">Reset Everything</button>
+    </div>
+</div>
+
+<script>
+    // --- Application State ---
+    let ladder = [];
+    let matches = [];
+
+    // --- Core Ladder Logic ---
+    function processMatch(p1, result, p2) {
+        // 1. Ensure both players exist on the ladder. New players join at the bottom.
+        p1 = p1.trim();
+        p2 = p2.trim();
+        if (!p1 || !p2 || p1 === p2) return;
+
+        if (!ladder.includes(p1)) ladder.push(p1);
+        if (!ladder.includes(p2)) ladder.push(p2);
+
+        // 2. Determine who is the "winner/higher rank target" and "loser/challenger"
+        let idx1 = ladder.indexOf(p1);
+        let idx2 = ladder.indexOf(p2);
+
+        let higherPlayer = idx1 < idx2 ? p1 : p2;
+        let lowerPlayer = idx1 < idx2 ? p2 : p1;
+        
+        let higherIdx = Math.min(idx1, idx2);
+        let lowerIdx = Math.max(idx1, idx2);
+
+        // 3. Apply positional logic based on rules
+        if (result === 'win' || result === 'loss') {
+            // Figure out actual winner and loser
+            let winner = (result === 'win') ? p1 : p2;
+            let loser = (result === 'win') ? p2 : p1;
+            
+            let winIdx = ladder.indexOf(winner);
+            let loseIdx = ladder.indexOf(loser);
+
+            // "move a winner that is lower than the loser to one space above the loser"
+            if (winIdx > loseIdx) {
+                // Remove winner from current lower spot
+                ladder.splice(winIdx, 1);
+                // Insert winner exactly right before the loser's index
+                ladder.splice(loseIdx, 0, winner);
+            }
+            // If the winner was already higher, nothing changes in a traditional ladder
+        } 
+        else if (result === 'draw') {
+            // "If it is a draw the lower player moves to one below the other player"
+            // Remove lower player from old position
+            ladder.splice(lowerIdx, 1);
+            // Find where the higher player is now, and insert lower player right after them
+            let newHigherIdx = ladder.indexOf(higherPlayer);
+            ladder.splice(newHigherIdx + 1, 0, lowerPlayer);
+        }
+
+        // Save progress
+        saveData();
+        renderAll();
+    }
+
+    // --- Storage Helpers ---
+    function saveData() {
+        localStorage.setItem('ladderData', JSON.stringify(ladder));
+        localStorage.setItem('matchHistory', JSON.stringify(matches));
+    }
+
+    function loadData() {
+        const storedLadder = localStorage.getItem('ladderData');
+        const storedMatches = localStorage.getItem('matchHistory');
+        
+        ladder = storedLadder ? JSON.parse(storedLadder) : [];
+        matches = storedMatches ? JSON.parse(storedMatches) : [];
+    }
+
+    // --- UI Rendering ---
+    function renderAll() {
+        // Render Ladder
+        const ladderBody = document.querySelector('#leaderboardTable tbody');
+        ladderBody.innerHTML = '';
+        ladder.forEach((player, index) => {
+            const row = `<tr>
+                <td><strong>${index + 1}</strong></td>
+                <td>${player}</td>
+            </tr>`;
+            ladderBody.insertAdjacentHTML('beforeend', row);
+        });
+
+        // Render Match History Table
+        const historyBody = document.querySelector('#historyTable tbody');
+        historyBody.innerHTML = '';
+        // Display last 5 matches for display cleanliness
+        matches.slice(-5).reverse().forEach(match => {
+            let displayResult = match.result === 'win' ? 'Defeated' : (match.result === 'loss' ? 'Lost to' : 'Drew with');
+            const row = `<tr>
+                <td>${match.p1}</td>
+                <td><strong>${displayResult}</strong></td>
+                <td>${match.p2}</td>
+            </tr>`;
+            historyBody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('matchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const p1 = document.getElementById('name1').value;
+        const p2 = document.getElementById('name2').value;
+        const result = document.getElementById('result').value;
+
+        // Add to historic log track
+        matches.push({ p1, result, p2 });
+        
+        // Execute placement ranking change
+        processMatch(p1, result, p2);
+
+        // Reset form inputs safely
+        document.getElementById('name1').value = '';
+        document.getElementById('name2').value = '';
+        document.getElementById('result').value = 'win';
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        if(confirm("Are you sure you want to clear the leaderboard and history?")) {
+            localStorage.clear();
+            ladder = [];
+            matches = [];
+            renderAll();
+        }
+    });
+
+    // --- Init Initialization ---
+    loadData();
+    renderAll();
+</script>
+
+</body>
+</html>
