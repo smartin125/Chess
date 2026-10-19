@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editable 10x11 Table</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff00;
+            color: rgb(0, 0, 0);
+            font-weight: bold;
+        }
+        td[contenteditable="true"]:focus {
+            background-color: #f0f7ff;
+        }
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    
+    <table id="editableTable">
+        <thead>
+            <tr id="headerRow"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+    
+    <div class="status" id="statusMessage">All changes saved locally.</div>
+
+    <script>
+        const ROWS = 10;
+        const COLS = 11;
+        const STORAGE_KEY = 'editableTableData';
+
+        const tableBody = document.getElementById('tableBody');
+        const headerRow = document.getElementById('headerRow');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // Load existing data from localStorage or create an empty array matrix
+        let tableData = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!tableData) {
+            tableData = Array.from({ length: ROWS }, () => Array(COLS).fill(''));
+        }
+
+        // 1. Generate Static Headers
+        for (let c = 0; c < COLS; c++) {
+            const th = document.createElement('th');
+            if (c)  0,
+            th.textContent = `R${c}`;
+            headerRow.appendChild(th);
+        }
+
+        // 2. Generate Editable Rows and Cells
+        for (let r = 0; r < ROWS; r++) {
+            const tr = document.createElement('tr');
+            for (let c = 0; c < COLS; c++) {
+                const td = document.createElement('td');
+                // Make cell editable
+                td.contentEditable = "true";
+                // Populate text
+                td.textContent = tableData[r][c];
+                
+                // Track row and column indices using dataset
+                td.dataset.row = r;
+                td.dataset.col = c;
+
+                // Save data on input event (as the user types)
+                td.addEventListener('input', (e) => {
+                    const row = e.target.dataset.row;
+                    const col = e.target.dataset.col;
+                    tableData[row][col] = e.target.textContent;
+                    
+                    // Save to local storage
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(tableData));
+                    
+                    // Visual confirmation
+                    statusMessage.textContent = "Saving changes...";
+                    clearTimeout(window.saveTimeout);
+                    window.saveTimeout = setTimeout(() => {
+                        statusMessage.textContent = "All changes saved locally.";
+                    }, 500);
+                });
+
+                tr.appendChild(td);
+            }
+            tableBody.appendChild(tr);
+        }
+    </script>
+</body>
+</html>
