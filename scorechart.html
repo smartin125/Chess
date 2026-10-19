@@ -65,8 +65,11 @@
         // 1. Generate Static Headers
         for (let c = 0; c < COLS; c++) {
             const th = document.createElement('th');
-            if (c)  0,
-            th.textContent = `R${c}`;
+            if (c === 0) {
+                th.textContent = "Player";
+            } else {
+                th.textContent = `R${c}`;
+            }
             headerRow.appendChild(th);
         }
 
