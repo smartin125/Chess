@@ -20,7 +20,7 @@
             background: #a0b9bb;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px #dae3e7;
+            box-shadow: 0 4px 6px #5c8084;
             flex: 1;
         }
         h2 {
@@ -63,12 +63,31 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
+        
     </style>
 </head>
 <body>
 
 <div class="container">
     <!-- Left Panel: Match Results Entry -->
+    
+
+    <!-- Right Panel: Ladder Leaderboard -->
+    <div class="panel">
+        <h2>Ladder Leaderboard</h2>
+        <table id="leaderboardTable">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">Rank</th>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Ladder items dynamically inserted here -->
+            </tbody>
+        </table>
+        <button id="resetBtn" style="background-color: #212d30;">Reset Everything</button>
+    </div>
     <div class="panel">
         <h2>Enter Match Result</h2>
         <form id="matchForm">
@@ -104,23 +123,6 @@
                 <!-- Match history items dynamically inserted here -->
             </tbody>
         </table>
-    </div>
-
-    <!-- Right Panel: Ladder Leaderboard -->
-    <div class="panel">
-        <h2>Ladder Leaderboard</h2>
-        <table id="leaderboardTable">
-            <thead>
-                <tr>
-                    <th style="width: 60px;">Rank</th>
-                    <th>Name</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Ladder items dynamically inserted here -->
-            </tbody>
-        </table>
-        <button id="resetBtn" style="background-color: #212d30;">Reset Everything</button>
     </div>
 </div>
 
