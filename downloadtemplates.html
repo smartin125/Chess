@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Spreadsheet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #238636;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2ea44f;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- No external script tags needed -->
+    <button id="download-btn">Download Individual Tournament Setup Template</button>
+
+    <script>
+        document.getElementById('download-btn').addEventListener('click', function() {
+            try {
+                // 1. Create your rows. Each array item is a row, elements separated by commas.
+                // We add the standard UTF-8 Byte Order Mark (\uFEFF) to ensure Excel reads special characters properly.
+                const csvContent = "\uFEFF" + [
+                    "Name",
+                    "Sam",
+                    "Owen"
+                ].join("\n");
+
+                // 2. Convert the text data into a secure raw data Blob
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                
+                // 3. Create a temporary invisible link element in memory
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute("href", url);
+                link.setAttribute("download", "IndividualTournamentTemplate.csv"); // Saves cleanly as a spreadsheet file
+                link.style.visibility = 'hidden';
+                
+                // 4. Force the browser to click the link and trigger the download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+            } catch (error) {
+                alert("An error occurred: " + error.message);
+                console.error(error);
+            }
+        });
+    </script>
+    <button id="downloadteam-btn">Download Teams Tournament Setup Template</button>
+
+    <script>
+        document.getElementById('downloadteam-btn').addEventListener('click', function() {
+            try {
+                // 1. Create your rows. Each array item is a row, elements separated by commas.
+                // We add the standard UTF-8 Byte Order Mark (\uFEFF) to ensure Excel reads special characters properly.
+                const csvContent = "\uFEFF" + [
+                    "Name",
+                    "Sam",
+                    "Owen"
+                ].join("\n");
+
+                // 2. Convert the text data into a secure raw data Blob
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                
+                // 3. Create a temporary invisible link element in memory
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute("href", url);
+                link.setAttribute("download", "TeamsTournamentTemplate.csv"); // Saves cleanly as a spreadsheet file
+                link.style.visibility = 'hidden';
+                
+                // 4. Force the browser to click the link and trigger the download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+            } catch (error) {
+                alert("An error occurred: " + error.message);
+                console.error(error);
+            }
+        });
+    </script>
+
+</body>
+</html>

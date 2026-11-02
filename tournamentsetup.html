@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV to HTML Table Converter</title>
+    <title>Tournament Setup</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -39,27 +39,27 @@
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+        #confirmbutton{
+            display: none;
+        }
     </style>
 </head>
 <body>
-<!-- HTML Link styled with a basic button wrapper -->
-<a href="Copy of Tournament Setup.xlsx" download="Tournament.xlsx">
-  <button type="button">Download Excel File</button>
-</a>
-
 
 <div class="container">
-    <h2>Import CSV File to Webpage</h2>
+    <h2>Import CSV Setup File</h2>
     <!-- File Input picker accepting only CSV files -->
     <input type="file" id="csvFileInput" accept=".csv" />
     <br />
     <!-- Container where the parsed HTML table will look -->
     <div id="tableContainer"></div>
+    <button id="confirmbutton">Confirm</button>
 </div>
 
 <script>
     const csvFileInput = document.getElementById('csvFileInput');
     const tableContainer = document.getElementById('tableContainer');
+    const confirmbutton = document.getElementById('confirmbutton');
 
     csvFileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -75,6 +75,8 @@
         };
 
         reader.readAsText(file);
+        
+        confirmbutton.style.display = 'inline-block';
     });
 
     // Simple robust CSV parser handling basic row and column splitting

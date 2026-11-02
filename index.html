@@ -3,11 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        body {
+            background-color: #5c8084;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .site-title {
+            margin: 0 0 clamp(30px, 3vw, 60px) 0;
+            font-size: clamp(44px, 3.5vw, 76px);   /* 👈 gentle scaling */
+            color: #212d30;
+            font-weight: bold;
+        }
+
+        a:link {
+            color: #dae3e7;
+            text-decoration: none;
+            font-size: clamp(28px, 2.4vw, 48px);   /* 👈 gentle scaling */
+            font-weight: bold;
+        }
+
+        a:visited { color: #dae3e7; }
+        a:hover   { color: #212d30; text-decoration: underline; }
+        a:active  { color: #ffffff; }
+
+        a {
+            display: inline-block;
+            margin: 12px 0;
+        }
+    </style>
 </head>
-<a href="ladder.html">Ladder</a>
-<br>
-<a href="leaderboard.html">Leaderboard</a>
-<br>
-<a href="scorechart.html">Scorechart</a>
-<br>
-<a href="tournamentsetup.html">Tournament Setup</a>
+<body>
+    <div class="content">
+        <h1 class="site-title">Insert Name</h1>
+
+        <div class="menu">
+            <a href="ladder.html">Ladder</a><br>
+            <a href="leaderboard.html">Leaderboard</a><br>
+            <a href="scorechart.html">Scorechart</a><br>
+            <a href="tournamentsetup.html">Tournament Setup</a><br>
+            <a href="downloadtemplates.html">Download Tournament Templates</a>
+        </div>
+    </div>
+</body>
+</html>
