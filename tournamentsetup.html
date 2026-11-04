@@ -42,24 +42,101 @@
         #confirmbutton{
             display: none;
         }
+        #tournamenttypeindividual{
+            display: none;
+        }
+        #tournamenttypeteam{
+            display: none;
+        }
     </style>
 </head>
 <body>
-
 <div class="container">
+    <h2>Select Tournament Type (1)</h2>
+    <div>
+    <input type="radio" id="optionind" name="choice" value="ind" checked>
+    <label for="optionind">Individual</label>
+  </div>
+
+  <!-- The "That" Option -->
+  <div>
+    <input type="radio" id="optionteam" name="choice" value="team">
+    <label for="optionteam">Teams</label>
+  </div>
+<span id="tournamenttypeindividual"><h2>Select Tournament Type (2)</h2>
+    <div>
+    <input type="radio" id="optionLadder" name="choice" value="Ladder" checked>
+    <label for="optionLadder">Ladder</label>
+  </div>
+  <div>
+    <input type="radio" id="optionRoundRobin" name="choice" value="RoundRobin">
+    <label for="optionRoundRobin">Round Robin</label>
+  </div>
+  <div>
+    <input type="radio" id="optionSwissSystem" name="choice" value="SwissSystem">
+    <label for="optionSwissSystem">Swiss System</label>
+  </div>
+  <div>
+    <input type="radio" id="optionKnockout" name="choice" value="Knockout">
+    <label for="optionKnockout">Knockout</label>
+  </div></span>
+
+  <span id="tournamenttypeteam"><h2>Select Tournament Type (2)</h2>
+
+  <div>
+    <input type="radio" id="optionRoundRobin" name="choice" value="RoundRobin">
+    <label for="optionRoundRobin">Round Robin</label>
+  </div>
+  <div>
+    <input type="radio" id="optionSwissSystem" name="choice" value="SwissSystem">
+    <label for="optionSwissSystem">Swiss System</label>
+  </div>
+  <div>
+    <input type="radio" id="optionKnockout" name="choice" value="Knockout">
+    <label for="optionKnockout">Knockout</label>
+  </div></span>
+
+  
+  <h2>Enter Tournament Name</h2>
+    <label for="username">Name (max 20 characters):</label>
+<input type="text" id="username" name="username" maxlength="20">
+
+
+
     <h2>Import CSV Setup File</h2>
     <!-- File Input picker accepting only CSV files -->
     <input type="file" id="csvFileInput" accept=".csv" />
-    <br />
+    <button id="confirmbutton">Confirm Details</button>
     <!-- Container where the parsed HTML table will look -->
     <div id="tableContainer"></div>
-    <button id="confirmbutton">Confirm</button>
+    
 </div>
 
 <script>
     const csvFileInput = document.getElementById('csvFileInput');
     const tableContainer = document.getElementById('tableContainer');
     const confirmbutton = document.getElementById('confirmbutton');
+    const optionind = document.getElementById('optionind');
+    const optionteam = document.getElementById('optionteam');
+    const tournamenttypeindividual = document.getElementById('tournamenttypeindividual');
+    const tournamenttypeteam = document.getElementById('tournamenttypeteam');
+
+        optionind.addEventListener('change', function(e) {
+        if (tournamenttypeindividual.style.display) {
+            tournamenttypeindividual.style.display = 'inline-block';
+        } else {
+            tournamenttypeindividual.style.display = 'none'
+        }
+        
+    });
+        optionteam.addEventListener('change', function(e) {
+        if (tournamenttypeteam.style.display='none') {
+            tournamenttypeteam.style.display = 'inline-block';
+        } else {
+            tournamenttypeteam.style.display = 'none'
+        }
+        
+    });
 
     csvFileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
