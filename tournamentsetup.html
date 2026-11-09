@@ -54,46 +54,46 @@
 <div class="container">
     <h2>Select Tournament Type (1)</h2>
     <div>
-    <input type="radio" id="optionind" name="choice" value="ind" checked>
+    <input type="radio" id="optionind" name="choice1" value="ind" checked>
     <label for="optionind">Individual</label>
   </div>
 
   <!-- The "That" Option -->
   <div>
-    <input type="radio" id="optionteam" name="choice" value="team">
+    <input type="radio" id="optionteam" name="choice1" value="team">
     <label for="optionteam">Teams</label>
   </div>
 <span id="tournamenttypeindividual"><h2>Select Tournament Type (2)</h2>
     <div>
-    <input type="radio" id="optionLadder" name="choice" value="Ladder" checked>
+    <input type="radio" id="optionLadder" name="choice2individual" value="Ladder" checked>
     <label for="optionLadder">Ladder</label>
   </div>
   <div>
-    <input type="radio" id="optionRoundRobin" name="choice" value="RoundRobin">
+        <input type="radio" id="optionRoundRobin" name="choice2individual" value="RoundRobin">
     <label for="optionRoundRobin">Round Robin</label>
   </div>
   <div>
-    <input type="radio" id="optionSwissSystem" name="choice" value="SwissSystem">
+        <input type="radio" id="optionSwissSystem" name="choice2individual" value="SwissSystem">
     <label for="optionSwissSystem">Swiss System</label>
   </div>
   <div>
-    <input type="radio" id="optionKnockout" name="choice" value="Knockout">
+        <input type="radio" id="optionKnockout" name="choice2individual" value="Knockout">
     <label for="optionKnockout">Knockout</label>
   </div></span>
 
   <span id="tournamenttypeteam"><h2>Select Tournament Type (2)</h2>
 
   <div>
-    <input type="radio" id="optionRoundRobin" name="choice" value="RoundRobin">
-    <label for="optionRoundRobin">Round Robin</label>
+        <input type="radio" id="optionRoundRobinTeam" name="choice2team" value="RoundRobin" checked>
+        <label for="optionRoundRobinTeam">Round Robin</label>
   </div>
   <div>
-    <input type="radio" id="optionSwissSystem" name="choice" value="SwissSystem">
-    <label for="optionSwissSystem">Swiss System</label>
+        <input type="radio" id="optionSwissSystemTeam" name="choice2team" value="SwissSystem">
+        <label for="optionSwissSystemTeam">Swiss System</label>
   </div>
   <div>
-    <input type="radio" id="optionKnockout" name="choice" value="Knockout">
-    <label for="optionKnockout">Knockout</label>
+        <input type="radio" id="optionKnockoutTeam" name="choice2team" value="Knockout">
+        <label for="optionKnockoutTeam">Knockout</label>
   </div></span>
 
   
@@ -107,6 +107,7 @@
     <!-- File Input picker accepting only CSV files -->
     <input type="file" id="csvFileInput" accept=".csv" />
     <button id="confirmbutton">Confirm Details</button>
+    <p id="importMessage" role="status" aria-live="polite"></p>
     <!-- Container where the parsed HTML table will look -->
     <div id="tableContainer"></div>
     
@@ -120,26 +121,26 @@
     const optionteam = document.getElementById('optionteam');
     const tournamenttypeindividual = document.getElementById('tournamenttypeindividual');
     const tournamenttypeteam = document.getElementById('tournamenttypeteam');
+    const importMessage = document.getElementById('importMessage');
+    let importedRows = [];
 
-        optionind.addEventListener('change', function(e) {
-        if (tournamenttypeindividual.style.display) {
-            tournamenttypeindividual.style.display = 'inline-block';
-        } else {
-            tournamenttypeindividual.style.display = 'none'
-        }
-        
+    tournamenttypeindividual.style.display = optionind.checked ? 'inline-block' : 'none';
+    tournamenttypeteam.style.display = optionteam.checked ? 'inline-block' : 'none';
+
+    optionind.addEventListener('change', function() {
+        tournamenttypeindividual.style.display = 'inline-block';
+        tournamenttypeteam.style.display = 'none';
     });
-        optionteam.addEventListener('change', function(e) {
-        if (tournamenttypeteam.style.display='none') {
-            tournamenttypeteam.style.display = 'inline-block';
-        } else {
-            tournamenttypeteam.style.display = 'none'
-        }
-        
+    optionteam.addEventListener('change', function() {
+        tournamenttypeteam.style.display = 'inline-block';
+        tournamenttypeindividual.style.display = 'none';
     });
 
     csvFileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
+        importedRows = [];
+        confirmbutton.style.display = 'none';
+        tableContainer.innerHTML = '';
         if (!file) return;
 
         const reader = new FileReader();
@@ -148,21 +149,46 @@
         reader.onload = function(e) {
             const text = e.target.result;
             const data = parseCSV(text);
+            importedRows = data;
             generateTable(data);
+            importMessage.textContent = '';
+            confirmbutton.style.display = 'inline-block';
         };
 
         reader.readAsText(file);
         
-        confirmbutton.style.display = 'inline-block';
     });
 
-    // Simple robust CSV parser handling basic row and column splitting
     function parseCSV(text) {
-        const lines = text.split('\n');
-        return lines
-            .map(line => line.trim())
-            .filter(line => line.length > 0) // Skip empty lines
-            .map(line => line.split(','));   // Split columns by comma
+        const rows = [];
+        let row = [];
+        let field = '';
+        let inQuotes = false;
+
+        for (let index = 0; index < text.length; index++) {
+            const character = text[index];
+            if (character === '"' && inQuotes && text[index + 1] === '"') {
+                field += '"';
+                index++;
+            } else if (character === '"') {
+                inQuotes = !inQuotes;
+            } else if (character === ',' && !inQuotes) {
+                row.push(field.trim());
+                field = '';
+            } else if ((character === '\n' || character === '\r') && !inQuotes) {
+                if (character === '\r' && text[index + 1] === '\n') index++;
+                row.push(field.trim());
+                if (row.some(value => value !== '')) rows.push(row);
+                row = [];
+                field = '';
+            } else {
+                field += character;
+            }
+        }
+
+        row.push(field.trim());
+        if (row.some(value => value !== '')) rows.push(row);
+        return rows;
     }
 
     // Constructs the HTML table elements dynamically
@@ -205,6 +231,112 @@
             }[s];
         });
     }
+
+    confirmbutton.addEventListener('click', function() {
+        const isTeamTournament = optionteam.checked;
+        const tournamentName = document.getElementById('username').value.trim();
+        const headers = importedRows[0]?.map(value => value.replace(/^\uFEFF/, '').trim().toLowerCase()) || [];
+        const nameColumn = headers.indexOf('name');
+        const teamColumn = headers.indexOf('team');
+        const playerColumns = headers
+            .map((header, index) => /^player(?:\s+\d+)?$/.test(header) ? index : -1)
+            .filter(index => index !== -1);
+
+        if (!tournamentName) {
+            importMessage.textContent = 'Enter a tournament name before confirming.';
+            return;
+        }
+        if ((!isTeamTournament && nameColumn === -1) ||
+            (isTeamTournament && (teamColumn === -1 || (nameColumn === -1 && playerColumns.length === 0)))) {
+            importMessage.textContent = isTeamTournament
+                ? 'Team CSV must include a Team column and either a Name or Player 1-4 column.'
+                : 'Individual CSV must include a Name column.';
+            return;
+        }
+
+        const rows = importedRows.slice(1);
+        const names = isTeamTournament
+            ? rows.flatMap(row => nameColumn !== -1
+                ? [row[nameColumn]?.trim() || '']
+                : playerColumns.map(column => row[column]?.trim() || ''))
+            : rows.map(row => row[nameColumn]?.trim() || '');
+        const validNames = names.filter(Boolean);
+        if (validNames.length === 0) {
+            importMessage.textContent = 'The CSV does not contain any names to import.';
+            return;
+        }
+        if (isTeamTournament && !rows.some(row => row[teamColumn]?.trim() &&
+            (nameColumn !== -1 ? row[nameColumn]?.trim() : playerColumns.some(column => row[column]?.trim())))) {
+            importMessage.textContent = 'The CSV must include at least one player assigned to a team.';
+            return;
+        }
+
+        const tournamentType = (isTeamTournament
+            ? document.querySelector('input[name="choice2team"]:checked')
+            : document.querySelector('input[name="choice2individual"]:checked'))?.value;
+        const tournament = {
+            name: tournamentName,
+            category: isTeamTournament ? 'team' : 'individual',
+            type: tournamentType
+        };
+
+        if (isTeamTournament) {
+            const teams = JSON.parse(localStorage.getItem('teamLeaderboard') || '[]');
+            const importedTeams = new Map();
+            rows.forEach(row => {
+                const teamName = row[teamColumn]?.trim() || '';
+                const memberNames = nameColumn !== -1
+                    ? [row[nameColumn]?.trim() || '']
+                    : playerColumns.map(column => row[column]?.trim() || '');
+                if (!teamName) return;
+                if (!importedTeams.has(teamName)) importedTeams.set(teamName, new Map());
+                memberNames.filter(Boolean).forEach(memberName => {
+                    importedTeams.get(teamName).set(memberName.toLowerCase(), memberName);
+                });
+            });
+            importedTeams.forEach((members, teamName) => {
+                const existing = teams.find(team => team.name.toLowerCase() === teamName.toLowerCase());
+                if (existing) {
+                    const existingMembers = (existing.members || []).map(member => typeof member === 'string'
+                        ? { name: member, score: 0 }
+                        : member);
+                    members.forEach(memberName => {
+                        if (!existingMembers.some(member => member.name.toLowerCase() === memberName.toLowerCase())) {
+                            existingMembers.push({ name: memberName, score: 0 });
+                        }
+                    });
+                    existing.members = existingMembers;
+                    existing.score = existingMembers.reduce((total, member) => total + (Number(member.score) || 0), 0);
+                } else {
+                    teams.push({
+                        name: teamName,
+                        score: 0,
+                        members: [...members.values()].map(name => ({ name, score: 0 }))
+                    });
+                }
+            });
+            localStorage.setItem('teamLeaderboard', JSON.stringify(teams));
+        } else if (tournamentType === 'Ladder') {
+            const ladder = JSON.parse(localStorage.getItem('ladderData') || '[]');
+            names.forEach(name => {
+                if (!ladder.some(existing => existing.toLowerCase() === name.toLowerCase())) ladder.push(name);
+            });
+            localStorage.setItem('ladderData', JSON.stringify(ladder));
+        } else {
+            const players = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+            names.forEach(name => {
+                if (!players.some(player => player.name.toLowerCase() === name.toLowerCase())) {
+                    players.push({ name, score: 0 });
+                }
+            });
+            localStorage.setItem('leaderboard', JSON.stringify(players));
+        }
+
+        localStorage.setItem('currentTournament', JSON.stringify(tournament));
+        window.location.href = isTeamTournament
+            ? 'leaderboard.html?mode=team'
+            : (tournamentType === 'Ladder' ? 'ladder.html' : 'leaderboard.html');
+    });
 </script>
 
 </body>

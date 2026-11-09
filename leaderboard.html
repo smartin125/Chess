@@ -99,9 +99,33 @@
             font-weight: 600;
         }
 
-        .rank-col { width: 15%; text-align: center; }
+        .rank-col { width: 10%; text-align: center; }
         .name-col { width: 55%; }
-        .score-col { width: 30%; text-align: right; }
+        .score-col { width: 35%; text-align: right; }
+
+        .team-details summary {
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .team-roster {
+            display: grid;
+            gap: 6px;
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        .team-member {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .team-member input {
+            width: 76px;
+            text-align: right;
+        }
 
         td.score-col input {
             width: 70px;
@@ -139,7 +163,7 @@
 <body>
 
 <div class="container">
-    <h1>Leaderboard</h1>
+    <h1 id="leaderboardTitle">Leaderboard</h1>
     
     <div class="form-group">
         <input type="text" id="playerName" placeholder="Player Name" autocomplete="off">
@@ -152,7 +176,7 @@
         <thead>
             <tr>
                 <th class="rank-col">Rank</th>
-                <th class="name-col">Name</th>
+                <th class="name-col" id="nameHeading">Name</th>
                 <th class="score-col" style="text-align: right;">Score</th>
             </tr>
         </thead>
@@ -163,38 +187,113 @@
 </div>
 
 <script>
-    // Load existing data or initialize empty array
-    let players = JSON.parse(localStorage.getItem('leaderboard')) || [];
+    const isTeamLeaderboard = new URLSearchParams(window.location.search).get('mode') === 'team';
+    const storageKey = isTeamLeaderboard ? 'teamLeaderboard' : 'leaderboard';
+    const currentTournament = JSON.parse(localStorage.getItem('currentTournament') || 'null');
+    let players = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+    if (isTeamLeaderboard) {
+        players = players.map(team => ({
+            ...team,
+            members: (team.members || []).map(member => typeof member === 'string'
+                ? { name: member, score: 0 }
+                : { ...member, score: Number(member.score) || 0 })
+        }));
+        document.getElementById('leaderboardTitle').textContent = currentTournament?.name
+            ? `${currentTournament.name} Teams`
+            : 'Team Leaderboard';
+        document.getElementById('nameHeading').textContent = 'Team';
+        document.getElementById('playerName').placeholder = 'Team Name';
+        document.querySelector('.form-group button').textContent = 'Add Team';
+    } else if (currentTournament?.name) {
+        document.getElementById('leaderboardTitle').textContent = `${currentTournament.name} Leaderboard`;
+    }
 
     // Initial render
     renderLeaderboard();
 
     function renderLeaderboard() {
+        if (isTeamLeaderboard) {
+            players.forEach(team => {
+                team.score = team.members.reduce((total, member) => total + member.score, 0);
+            });
+        }
         // Sort players descending by score
         players.sort((a, b) => b.score - a.score);
         
         // Save to localStorage
-        localStorage.setItem('leaderboard', JSON.stringify(players));
+        localStorage.setItem(storageKey, JSON.stringify(players));
 
         const tbody = document.getElementById('leaderboardBody');
         tbody.innerHTML = '';
 
         players.forEach((player, index) => {
             const row = document.createElement('tr');
-            
-            row.innerHTML = `
-                <td class="rank-col">${index + 1}</td>
-                <td class="name-col">${escapeHtml(player.name)}</td>
-                <td class="score-col">
-                    <div class="actions-cell">
-                        <input type="number" 
-                               value="${player.score}" 
-                               onchange="updateScore('${escapeQuotes(player.name)}', this.value)"
-                               onkeydown="if(event.key==='Enter') this.blur()">
-                        <button class="delete-btn" onclick="deletePlayer('${escapeQuotes(player.name)}')">✕</button>
-                    </div>
-                </td>
-            `;
+
+            const rankCell = document.createElement('td');
+            rankCell.className = 'rank-col';
+            rankCell.textContent = index + 1;
+
+            const nameCell = document.createElement('td');
+            nameCell.className = 'name-col';
+            if (isTeamLeaderboard) {
+                const details = document.createElement('details');
+                details.className = 'team-details';
+                details.dataset.teamName = player.name;
+                const summary = document.createElement('summary');
+                summary.textContent = player.name;
+                const roster = document.createElement('div');
+                roster.className = 'team-roster';
+
+                player.members.forEach(member => {
+                    const memberRow = document.createElement('label');
+                    memberRow.className = 'team-member';
+                    const memberName = document.createElement('span');
+                    memberName.textContent = member.name;
+                    const memberScore = document.createElement('input');
+                    memberScore.type = 'number';
+                    memberScore.min = '0';
+                    memberScore.step = '0.5';
+                    memberScore.value = member.score;
+                    memberScore.setAttribute('aria-label', `${member.name} score`);
+                    memberScore.addEventListener('change', () => updateMemberScore(player.name, member.name, memberScore.value));
+                    memberRow.append(memberName, memberScore);
+                    roster.appendChild(memberRow);
+                });
+
+                details.append(summary, roster);
+                nameCell.appendChild(details);
+            } else {
+                nameCell.textContent = player.name;
+            }
+
+            row.append(rankCell, nameCell);
+
+            const scoreCell = document.createElement('td');
+            scoreCell.className = 'score-col';
+            const actions = document.createElement('div');
+            actions.className = 'actions-cell';
+            if (isTeamLeaderboard) {
+                actions.textContent = player.score;
+            } else {
+                const scoreInput = document.createElement('input');
+                scoreInput.type = 'number';
+                scoreInput.value = player.score;
+                scoreInput.addEventListener('change', () => updateScore(player.name, scoreInput.value));
+                scoreInput.addEventListener('keydown', event => {
+                    if (event.key === 'Enter') scoreInput.blur();
+                });
+                actions.appendChild(scoreInput);
+            }
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-btn';
+            deleteButton.type = 'button';
+            deleteButton.textContent = '✕';
+            deleteButton.setAttribute('aria-label', `Delete ${player.name}`);
+            deleteButton.addEventListener('click', () => deletePlayer(player.name));
+                actions.appendChild(deleteButton);
+            scoreCell.appendChild(actions);
+            row.appendChild(scoreCell);
             tbody.appendChild(row);
         });
     }
@@ -223,11 +322,24 @@
         }
 
         // Add player and reset form
-        players.push({ name, score });
+        players.push(isTeamLeaderboard ? { name, score, members: [] } : { name, score });
         nameInput.value = '';
         scoreInput.value = '';
         
         renderLeaderboard();
+    }
+
+    function updateMemberScore(teamName, memberName, newScore) {
+        const team = players.find(player => player.name === teamName);
+        const member = team?.members.find(player => player.name === memberName);
+        if (!member) return;
+
+        const score = newScore === '' ? 0 : Number(newScore);
+        member.score = Number.isFinite(score) ? score : 0;
+        renderLeaderboard();
+        const updatedDetails = [...document.querySelectorAll('.team-details')]
+            .find(details => details.dataset.teamName === teamName);
+        if (updatedDetails) updatedDetails.open = true;
     }
 
     function updateScore(name, newScore) {
@@ -245,13 +357,6 @@
         renderLeaderboard();
     }
 
-    // Helper functions to prevent XSS and formatting bugs
-    function escapeHtml(str) {
-        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-    function escapeQuotes(str) {
-        return str.replace(/'/g, "\\'");
-    }
 </script>
 
 </body>

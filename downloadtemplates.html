@@ -77,9 +77,9 @@
                 // 1. Create your rows. Each array item is a row, elements separated by commas.
                 // We add the standard UTF-8 Byte Order Mark (\uFEFF) to ensure Excel reads special characters properly.
                 const csvContent = "\uFEFF" + [
-                    "Name",
-                    "Sam",
-                    "Owen"
+                    "Team,Player 1,Player 2,Player 3,Player 4",
+                    "Team A,Sam,Owen,Alex,Jordan",
+                    "Team B,Casey,Taylor,Morgan,Riley"
                 ].join("\n");
 
                 // 2. Convert the text data into a secure raw data Blob

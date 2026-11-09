@@ -203,11 +203,15 @@
         const ladderBody = document.querySelector('#leaderboardTable tbody');
         ladderBody.innerHTML = '';
         ladder.forEach((player, index) => {
-            const row = `<tr>
-                <td><strong>${index + 1}</strong></td>
-                <td>${player}</td>
-            </tr>`;
-            ladderBody.insertAdjacentHTML('beforeend', row);
+            const row = document.createElement('tr');
+            const rankCell = document.createElement('td');
+            const rank = document.createElement('strong');
+            rank.textContent = index + 1;
+            rankCell.appendChild(rank);
+            const playerCell = document.createElement('td');
+            playerCell.textContent = player;
+            row.append(rankCell, playerCell);
+            ladderBody.appendChild(row);
         });
 
         // Render Match History Table
@@ -216,12 +220,17 @@
         // Display last 5 matches for display cleanliness
         matches.slice(-5).reverse().forEach(match => {
             let displayResult = match.result === 'win' ? 'Defeated' : (match.result === 'loss' ? 'Lost to' : 'Drew with');
-            const row = `<tr>
-                <td>${match.p1}</td>
-                <td><strong>${displayResult}</strong></td>
-                <td>${match.p2}</td>
-            </tr>`;
-            historyBody.insertAdjacentHTML('beforeend', row);
+            const row = document.createElement('tr');
+            const playerOneCell = document.createElement('td');
+            const resultCell = document.createElement('td');
+            const result = document.createElement('strong');
+            const playerTwoCell = document.createElement('td');
+            playerOneCell.textContent = match.p1;
+            result.textContent = displayResult;
+            resultCell.appendChild(result);
+            playerTwoCell.textContent = match.p2;
+            row.append(playerOneCell, resultCell, playerTwoCell);
+            historyBody.appendChild(row);
         });
     }
 
