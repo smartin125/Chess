@@ -158,12 +158,24 @@
             font-size: 12px;
             padding: 0;
         }
+
+        .tournament-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 20px 0;
+        }
     </style>
 </head>
-<body>
+<body data-page="leaderboard">
 
 <div class="container">
     <h1 id="leaderboardTitle">Leaderboard</h1>
+
+    <div id="tournamentActions" class="tournament-actions" hidden>
+        <button type="button" onclick="window.location.href='pairing.html'">New Round</button>
+        <button type="button" onclick="window.location.href='scorechart.html'">Score Round</button>
+    </div>
     
     <div class="form-group">
         <input type="text" id="playerName" placeholder="Player Name" autocomplete="off">
@@ -358,6 +370,7 @@
     }
 
 </script>
+<script src="tournament.js"></script>
 
 </body>
 </html>

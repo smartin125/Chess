@@ -3,111 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editable 10x11 Table</title>
+    <title>Score Round</title>
     <style>
         body {
+            margin: 0;
+            padding: 24px;
+            background: #5c8084;
+            color: #212d30;
             font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #5c8084;
+        }
+        main {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 24px;
+            border-radius: 12px;
+            background: #a0b9bb;
+        }
+        .table-wrap {
+            overflow-x: auto;
         }
         table {
-            border-collapse: collapse;
             width: 100%;
-            background-color: #dae3e7;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-collapse: collapse;
+            background: #dae3e7;
         }
         th, td {
-            border: 1px solid #dae3e7;
+            min-width: 150px;
             padding: 10px;
+            border: 1px solid #a0b9bb;
             text-align: left;
         }
-        th {
-            background-color: #007bff00;
-            color: rgb(0, 0, 0);
-            font-weight: bold;
+        th:first-child, td:first-child {
+            min-width: 85px;
         }
-        td[contenteditable="true"]:focus {
-            background-color: #f0f7ff;
+        select {
+            display: block;
+            width: 100%;
+            margin-top: 6px;
+            padding: 7px;
+            border: 1px solid #a0b9bb;
+            border-radius: 5px;
+            background: white;
         }
-        .status {
-            margin-top: 10px;
-            font-style: italic;
-            color: #212d30;
+        .opponent {
+            font-size: 0.9em;
+        }
+        .message {
+            min-height: 1.5em;
+        }
+        #teamSelector {
+            margin-bottom: 16px;
+            padding: 8px;
         }
     </style>
 </head>
-<body>
-    
-    <table id="editableTable">
-        <thead>
-            <tr id="headerRow"></tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
-    
-    <div class="status" id="statusMessage">All changes saved locally.</div>
-
-    <script>
-        const ROWS = 10;
-        const COLS = 11;
-        const STORAGE_KEY = 'editableTableData';
-
-        const tableBody = document.getElementById('tableBody');
-        const headerRow = document.getElementById('headerRow');
-        const statusMessage = document.getElementById('statusMessage');
-
-        // Load existing data from localStorage or create an empty array matrix
-        let tableData = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (!tableData) {
-            tableData = Array.from({ length: ROWS }, () => Array(COLS).fill(''));
-        }
-
-        // 1. Generate Static Headers
-        for (let c = 0; c < COLS; c++) {
-            const th = document.createElement('th');
-            if (c === 0) {
-                th.textContent = "Player";
-            } else {
-                th.textContent = `R${c}`;
-            }
-            headerRow.appendChild(th);
-        }
-
-        // 2. Generate Editable Rows and Cells
-        for (let r = 0; r < ROWS; r++) {
-            const tr = document.createElement('tr');
-            for (let c = 0; c < COLS; c++) {
-                const td = document.createElement('td');
-                // Make cell editable
-                td.contentEditable = "true";
-                // Populate text
-                td.textContent = tableData[r][c];
-                
-                // Track row and column indices using dataset
-                td.dataset.row = r;
-                td.dataset.col = c;
-
-                // Save data on input event (as the user types)
-                td.addEventListener('input', (e) => {
-                    const row = e.target.dataset.row;
-                    const col = e.target.dataset.col;
-                    tableData[row][col] = e.target.textContent;
-                    
-                    // Save to local storage
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(tableData));
-                    
-                    // Visual confirmation
-                    statusMessage.textContent = "Saving changes...";
-                    clearTimeout(window.saveTimeout);
-                    window.saveTimeout = setTimeout(() => {
-                        statusMessage.textContent = "All changes saved locally.";
-                    }, 500);
-                });
-
-                tr.appendChild(td);
-            }
-            tableBody.appendChild(tr);
-        }
-    </script>
+<body data-page="scores">
+<main>
+    <h1 id="pageTitle">Score Round</h1>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <label id="teamSelectorLabel" for="teamSelector" hidden>Show team:</label>
+    <select id="teamSelector" hidden></select>
+    <div class="table-wrap">
+        <table>
+            <thead id="scoreHead"></thead>
+            <tbody id="scoreBody"></tbody>
+        </table>
+    </div>
+    <p><a href="leaderboard.html">Back to leaderboard</a></p>
+</main>
+<script src="tournament.js"></script>
 </body>
 </html>

@@ -1,1 +1,90 @@
-<h1>Pairing</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Pairings</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #5c8084;
+            color: #212d30;
+            font-family: Arial, sans-serif;
+        }
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px;
+            border-radius: 12px;
+            background: #a0b9bb;
+        }
+        .controls, .rounds, .bracket {
+            margin-top: 20px;
+        }
+        button, input {
+            padding: 9px 12px;
+            border: 1px solid #dae3e7;
+            border-radius: 6px;
+            font: inherit;
+        }
+        button {
+            border: 0;
+            background: #212d30;
+            color: #dae3e7;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .rounds {
+            display: grid;
+            gap: 16px;
+        }
+        .round {
+            padding: 14px;
+            border: 1px solid #dae3e7;
+            border-radius: 8px;
+            background: #dae3e7;
+        }
+        .round h2 {
+            margin: 0 0 10px;
+        }
+        .match {
+            margin: 6px 0;
+        }
+        .bracket {
+            display: flex;
+            gap: 18px;
+            overflow-x: auto;
+            align-items: stretch;
+        }
+        .bracket-round {
+            min-width: 190px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .bracket-match {
+            padding: 10px;
+            border: 1px solid #dae3e7;
+            border-radius: 6px;
+            background: #dae3e7;
+            white-space: pre-line;
+        }
+        .message {
+            min-height: 1.5em;
+        }
+    </style>
+</head>
+<body data-page="pairing">
+<main>
+    <h1 id="pageTitle">Tournament Pairings</h1>
+    <p id="tournamentInfo"></p>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <section id="controls" class="controls"></section>
+    <section id="rounds" class="rounds"></section>
+    <section id="bracket" class="bracket" aria-label="Tournament bracket"></section>
+    <p><a href="leaderboard.html">Back to leaderboard</a></p>
+</main>
+<script src="tournament.js"></script>
+</body>
+</html>
