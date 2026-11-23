@@ -45,6 +45,9 @@
             border-radius: 5px;
             background: white;
         }
+        select[hidden] {
+            display: none;
+        }
         .opponent {
             font-size: 0.9em;
         }
@@ -55,6 +58,10 @@
             margin-bottom: 16px;
             padding: 8px;
         }
+        #playerSearch {
+            margin: 0 8px 16px 0;
+            padding: 8px;
+        }
     </style>
 </head>
 <body data-page="scores">
@@ -63,6 +70,12 @@
     <p id="message" class="message" role="status" aria-live="polite"></p>
     <label id="teamSelectorLabel" for="teamSelector" hidden>Show team:</label>
     <select id="teamSelector" hidden></select>
+    <div id="individualSelector" hidden>
+        <label for="playerSearch">Search players:</label>
+        <input id="playerSearch" type="search" autocomplete="off">
+        <label for="playerSelector">Show player:</label>
+        <select id="playerSelector"></select>
+    </div>
     <div class="table-wrap">
         <table>
             <thead id="scoreHead"></thead>

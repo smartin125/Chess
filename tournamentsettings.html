@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Settings</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #5c8084;
+            color: #212d30;
+            font-family: Arial, sans-serif;
+        }
+        main {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 24px;
+            border-radius: 12px;
+            background: #a0b9bb;
+        }
+        fieldset {
+            display: grid;
+            gap: 12px;
+            margin: 20px 0;
+            padding: 18px;
+            border: 1px solid #dae3e7;
+            border-radius: 8px;
+            background: #dae3e7;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input {
+            width: 18px;
+            height: 18px;
+        }
+        input[type="checkbox"] {
+            box-sizing: border-box;
+            flex: 0 0 18px;
+            margin: 0;
+        }
+        input:disabled {
+            cursor: not-allowed;
+        }
+        .tiebreak-option {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 16px;
+            padding: 8px;
+            border-bottom: 1px solid #a0b9bb;
+        }
+        .tiebreak-option[draggable="true"] {
+            cursor: grab;
+        }
+        .tiebreak-option.dragging {
+            opacity: 0.5;
+        }
+        .tiebreak-option.drag-over {
+            outline: 2px solid #212d30;
+        }
+        .tiebreak-option label {
+            flex: 1;
+        }
+        .drag-handle {
+            box-sizing: border-box;
+            display: flex;
+            flex: 0 0 32px;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 2px 6px;
+            border: 0;
+            background: transparent;
+            color: #52676a;
+            cursor: grab;
+            font: inherit;
+            font-size: 1.2em;
+        }
+        .drag-handle-placeholder {
+            flex: 0 0 32px;
+            width: 32px;
+        }
+        .message {
+            min-height: 1.5em;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1 id="pageTitle">Tournament Settings</h1>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <section aria-labelledby="tiebreakHeading">
+        <h2 id="tiebreakHeading">Tiebreaks</h2>
+        <fieldset id="tiebreakOptions">
+            <legend>Select tiebreaks and drag to change the application order</legend>
+            <div id="tiebreakList"></div>
+        </fieldset>
+    </section>
+    <p><a id="leaderboardLink" href="leaderboard.html">Back to leaderboard</a></p>
+</main>
+<script>
+    const tournament = JSON.parse(localStorage.getItem('currentTournament') || 'null');
+    const options = [
+        { id: 'buchholz', label: 'Buchholz', types: ['SwissSystem'] },
+        { id: 'median', label: 'Median', types: ['SwissSystem'] },
+        { id: 'sonnebornBerger', label: 'Sonneborn-Berger', types: ['SwissSystem', 'RoundRobin'] },
+        { id: 'directEncounter', label: 'Direct Encounter', types: ['SwissSystem', 'RoundRobin'] },
+        { id: 'blackPieces', label: 'Black Pieces', types: ['SwissSystem'] }
+    ];
+    const availableOptions = options.filter(option => tournament && option.types.includes(tournament.type));
+    let selectedIds = [...new Set(Array.isArray(tournament?.tiebreaks) ? tournament.tiebreaks : [])]
+        .filter(id => availableOptions.some(option => option.id === id));
+    const optionsContainer = document.getElementById('tiebreakList');
+
+    if (tournament?.name) {
+        document.getElementById('pageTitle').textContent = `${tournament.name} Settings`;
+    } else {
+        document.getElementById('message').textContent = 'Open settings from an active tournament leaderboard.';
+    }
+    if (tournament?.category === 'team') {
+        document.getElementById('leaderboardLink').href = 'leaderboard.html?mode=team';
+    }
+
+    function saveSelectedTiebreaks() {
+        if (!tournament) return;
+        tournament.tiebreaks = selectedIds.slice();
+        localStorage.setItem('currentTournament', JSON.stringify(tournament));
+    }
+
+    function reorderSelectedTiebreak(sourceId, targetId, insertBefore) {
+        const sourceIndex = selectedIds.indexOf(sourceId);
+        const targetIndex = selectedIds.indexOf(targetId);
+        if (sourceIndex < 0 || targetIndex < 0 || sourceId === targetId) return;
+        selectedIds.splice(sourceIndex, 1);
+        const adjustedTargetIndex = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
+        selectedIds.splice(adjustedTargetIndex + (insertBefore ? 0 : 1), 0, sourceId);
+        saveSelectedTiebreaks();
+        renderTiebreaks();
+    }
+
+    let draggedTiebreakId = null;
+
+    function renderTiebreaks() {
+        optionsContainer.replaceChildren();
+        const orderedOptions = [
+            ...selectedIds.map(id => options.find(option => option.id === id)),
+            ...options.filter(option => !selectedIds.includes(option.id))
+        ];
+
+        orderedOptions.forEach(option => {
+            const isSelected = selectedIds.includes(option.id);
+            const row = document.createElement('div');
+            row.className = 'tiebreak-option';
+            row.draggable = isSelected;
+            if (isSelected) {
+                const handle = document.createElement('button');
+                handle.type = 'button';
+                handle.className = 'drag-handle';
+                handle.textContent = '⠿';
+                handle.setAttribute('aria-label', `Drag to reorder ${option.label}`);
+                handle.addEventListener('keydown', event => {
+                    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                    event.preventDefault();
+                    const index = selectedIds.indexOf(option.id);
+                    const offset = event.key === 'ArrowUp' ? -1 : 1;
+                    const target = selectedIds[index + offset];
+                    if (target) reorderSelectedTiebreak(option.id, target, offset < 0);
+                });
+                row.appendChild(handle);
+            } else {
+                const placeholder = document.createElement('span');
+                placeholder.className = 'drag-handle-placeholder';
+                placeholder.setAttribute('aria-hidden', 'true');
+                row.appendChild(placeholder);
+            }
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = option.id;
+            checkbox.checked = isSelected;
+            checkbox.disabled = !availableOptions.includes(option);
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) selectedIds.push(option.id);
+                else selectedIds = selectedIds.filter(id => id !== option.id);
+                saveSelectedTiebreaks();
+                renderTiebreaks();
+            });
+            label.append(checkbox, document.createTextNode(option.label));
+            row.appendChild(label);
+            row.addEventListener('dragstart', event => {
+                draggedTiebreakId = option.id;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', option.id);
+                row.classList.add('dragging');
+            });
+            row.addEventListener('dragover', event => {
+                if (!draggedTiebreakId || !isSelected || draggedTiebreakId === option.id) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                row.classList.add('drag-over');
+            });
+            row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+            row.addEventListener('drop', event => {
+                if (!draggedTiebreakId || !isSelected) return;
+                event.preventDefault();
+                const bounds = row.getBoundingClientRect();
+                const insertBefore = event.clientY < bounds.top + bounds.height / 2;
+                reorderSelectedTiebreak(draggedTiebreakId, option.id, insertBefore);
+            });
+            row.addEventListener('dragend', () => {
+                draggedTiebreakId = null;
+                row.classList.remove('dragging');
+            });
+            optionsContainer.appendChild(row);
+        });
+    }
+
+    renderTiebreaks();
+</script>
+</body>
+</html>

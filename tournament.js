@@ -84,6 +84,17 @@
         return state.results[resultKey(roundIndex, matchIndex, boardIndex)] || '';
     }
 
+    function hasUnrecordedScores(state) {
+        return state.rounds.some((round, roundIndex) =>
+            round.matches.some((match, matchIndex) => {
+                if (!match.a || !match.b) return false;
+                for (let board = 0; board < boardCount(match); board++) {
+                    if (!getResult(state, roundIndex, matchIndex, board)) return true;
+                }
+                return false;
+            }));
+    }
+
     function participantPoints(state, name) {
         let total = 0;
         state.rounds.forEach((round, roundIndex) => {
@@ -122,12 +133,55 @@
         return orderedNames[orderedNames.length - 1];
     }
 
+    function assignSwissColors(match, colorCounts, roundIndex, matchIndex) {
+        const first = colorCounts.get(match.a);
+        const second = colorCounts.get(match.b);
+        const firstBalance = first.white - first.black;
+        const secondBalance = second.white - second.black;
+        const firstWhiteCost = (firstBalance + 1) ** 2 + (secondBalance - 1) ** 2;
+        const secondWhiteCost = (firstBalance - 1) ** 2 + (secondBalance + 1) ** 2;
+        let firstIsWhite = firstWhiteCost < secondWhiteCost;
+
+        if (firstWhiteCost === secondWhiteCost) {
+            const firstWhiteRepeats = Number(first.lastColor === 'white') + Number(second.lastColor === 'black');
+            const secondWhiteRepeats = Number(first.lastColor === 'black') + Number(second.lastColor === 'white');
+            firstIsWhite = firstWhiteRepeats === secondWhiteRepeats
+                ? (roundIndex + matchIndex) % 2 === 0
+                : firstWhiteRepeats < secondWhiteRepeats;
+        }
+
+        match.white = firstIsWhite ? match.a : match.b;
+        match.black = firstIsWhite ? match.b : match.a;
+        const white = colorCounts.get(match.white);
+        const black = colorCounts.get(match.black);
+        white.white++;
+        white.lastColor = 'white';
+        black.black++;
+        black.lastColor = 'black';
+    }
+
     function createSwissRound(state) {
         const ranked = standings(state).map(player => player.name);
         let bye = null;
         if (ranked.length % 2) bye = findSwissBye(state, ranked);
         const available = ranked.filter(name => name !== bye);
         const matches = [];
+        const colorCounts = new Map(names().map(name => [name, { white: 0, black: 0, lastColor: null }]));
+        state.rounds.forEach(round => {
+            round.matches.forEach(match => {
+                if (!match.white || !match.black) return;
+                const white = colorCounts.get(match.white);
+                const black = colorCounts.get(match.black);
+                if (white) {
+                    white.white++;
+                    white.lastColor = 'white';
+                }
+                if (black) {
+                    black.black++;
+                    black.lastColor = 'black';
+                }
+            });
+        });
         while (available.length) {
             const first = available.shift();
             let opponentIndex = available.findIndex(candidate =>
@@ -135,7 +189,9 @@
                     (match.a === first && match.b === candidate) ||
                     (match.a === candidate && match.b === first))));
             if (opponentIndex === -1) opponentIndex = 0;
-            matches.push({ a: first, b: available.splice(opponentIndex, 1)[0] });
+            const match = { a: first, b: available.splice(opponentIndex, 1)[0] };
+            if (!teamMode) assignSwissColors(match, colorCounts, state.rounds.length, matches.length);
+            matches.push(match);
         }
         state.rounds.push({ matches, bye });
     }
@@ -242,7 +298,9 @@
             round.matches.forEach(match => {
                 const item = document.createElement('p');
                 item.className = 'match';
-                item.textContent = `${match.a} vs ${match.b}`;
+                item.textContent = !teamMode && tournamentType === 'SwissSystem' && match.white
+                    ? `${match.white} (White) vs ${match.black} (Black)`
+                    : `${match.a} vs ${match.b}`;
                 section.appendChild(item);
             });
             if (round.bye) {
@@ -259,6 +317,8 @@
         const container = document.getElementById('bracket');
         container.replaceChildren();
         state.rounds.forEach((round, roundIndex) => {
+            const visibleMatches = round.matches.filter(match => match.a || match.b);
+            if (!visibleMatches.length) return;
             const column = document.createElement('section');
             column.className = 'bracket-round';
             const heading = document.createElement('h2');
@@ -266,7 +326,7 @@
                 ? 'Final'
                 : `Round ${roundIndex + 1}`;
             column.appendChild(heading);
-            round.matches.forEach(match => {
+            visibleMatches.forEach(match => {
                 const card = document.createElement('div');
                 card.className = 'bracket-match';
                 card.textContent = `${match.a || '—'}\nvs\n${match.b || '—'}`;
@@ -337,6 +397,10 @@
                 button.type = 'button';
                 button.textContent = state.rounds.length ? 'Generate Next Round' : 'Generate First Round';
                 button.addEventListener('click', () => {
+                    if (state.rounds.length && hasUnrecordedScores(state) &&
+                        !window.confirm('Some scores have not been recorded. Generate the next round anyway?')) {
+                        return;
+                    }
                     createSwissRound(state);
                     saveState(state);
                     renderPairingPage();
@@ -368,7 +432,10 @@
         const cell = document.createElement('td');
         const opponentLabel = document.createElement('div');
         opponentLabel.className = 'opponent';
-        opponentLabel.textContent = opponent ? `vs ${opponent}` : 'No opponent';
+        const color = !teamMode && tournamentType === 'SwissSystem' && match.white
+            ? match.white === viewedName ? 'White' : 'Black'
+            : '';
+        opponentLabel.textContent = opponent ? `vs ${opponent}${color ? ` (${color})` : ''}` : 'No opponent';
         cell.appendChild(opponentLabel);
         if (!opponent) return cell;
 
@@ -456,10 +523,13 @@
             setMessage('Generate pairings before recording scores.');
             return;
         }
-        setMessage('Choose each player’s result. The opponent’s result is filled in automatically.');
         const selector = document.getElementById('teamSelector');
         const selectorLabel = document.getElementById('teamSelectorLabel');
+        const individualSelector = document.getElementById('individualSelector');
+        const playerSearch = document.getElementById('playerSearch');
+        const playerSelector = document.getElementById('playerSelector');
         if (teamMode) {
+            individualSelector.hidden = true;
             selector.hidden = false;
             selectorLabel.hidden = false;
             const allTeams = competitors();
@@ -476,6 +546,22 @@
         } else {
             selector.hidden = true;
             selectorLabel.hidden = true;
+            individualSelector.hidden = false;
+            const query = playerSearch.value.trim().toLocaleLowerCase();
+            const matchingPlayers = names().filter(name => name.toLocaleLowerCase().includes(query));
+            const previousSelection = playerSelector.value;
+            playerSelector.replaceChildren();
+            matchingPlayers.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                playerSelector.appendChild(option);
+            });
+            playerSelector.value = matchingPlayers.includes(previousSelection)
+                ? previousSelection
+                : matchingPlayers[0] || '';
+            playerSearch.oninput = renderScorePage;
+            playerSelector.onchange = renderScorePage;
         }
 
         const columns = teamMode
@@ -487,12 +573,17 @@
         header.replaceChildren();
         body.replaceChildren();
         const headerRow = document.createElement('tr');
-        ['Round', ...columns].forEach(title => {
+        const visibleColumns = teamMode ? columns : [playerSelector.value].filter(Boolean);
+        ['Round', ...visibleColumns].forEach(title => {
             const th = document.createElement('th');
             th.textContent = title;
             headerRow.appendChild(th);
         });
         header.appendChild(headerRow);
+        if (!teamMode && !playerSelector.value) {
+            setMessage('No players match your search.');
+            return;
+        }
 
         state.rounds.forEach((round, roundIndex) => {
             const row = document.createElement('tr');
@@ -500,7 +591,7 @@
             roundCell.scope = 'row';
             roundCell.textContent = `Round ${roundIndex + 1}`;
             row.appendChild(roundCell);
-            columns.forEach((name, columnIndex) => {
+            visibleColumns.forEach((name, columnIndex) => {
                 let matchIndex;
                 let opponent;
                 let boardIndex = 0;
@@ -520,9 +611,13 @@
                     match = matchIndex === -1 ? null : round.matches[matchIndex];
                     opponent = match ? (match.a === name ? match.b : match.a) : null;
                 }
-                row.appendChild(match && opponent
-                    ? createOutcomeCell(state, roundIndex, matchIndex, boardIndex, name, match, opponent)
-                    : document.createElement('td'));
+                if (match && opponent) {
+                    row.appendChild(createOutcomeCell(state, roundIndex, matchIndex, boardIndex, name, match, opponent));
+                } else {
+                    const emptyCell = document.createElement('td');
+                    if (!teamMode && round.bye === name) emptyCell.textContent = 'Bye';
+                    row.appendChild(emptyCell);
+                }
             });
             body.appendChild(row);
         });

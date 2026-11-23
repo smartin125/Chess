@@ -24,12 +24,27 @@
         }
 
         .container {
+            position: relative;
             width: 100%;
             max-width: 1500px;
             background: var(--card-bg);
             padding: 25px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .settings-link {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            color: var(--primary);
+            font-size: 26px;
+            line-height: 1;
+            text-decoration: none;
+        }
+
+        .settings-link:hover {
+            opacity: 0.75;
         }
 
         h1 {
@@ -170,6 +185,7 @@
 <body data-page="leaderboard">
 
 <div class="container">
+    <a class="settings-link" href="tournamentsettings.html" aria-label="Tournament settings" title="Tournament settings">&#9881;</a>
     <h1 id="leaderboardTitle">Leaderboard</h1>
 
     <div id="tournamentActions" class="tournament-actions" hidden>
