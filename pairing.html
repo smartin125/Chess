@@ -73,17 +73,92 @@
         .message {
             min-height: 1.5em;
         }
+        .back-link {
+            margin: 0 0 16px;
+        }
+        .back-link a {
+            color: #212d30;
+            font-weight: bold;
+        }
+        .print-footer {
+            display: none;
+        }
+        @media print {
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+                color: black;
+            }
+            main {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                background: white;
+            }
+            .back-link,
+            .controls,
+            #tournamentInfo,
+            #message {
+                display: none !important;
+            }
+            #pageTitle {
+                margin: 0 0 18px;
+                font-size: 24pt;
+            }
+            .round {
+                break-inside: avoid;
+                margin-bottom: 12px;
+                border: 1px solid #777;
+                background: white;
+            }
+            .round h2 {
+                font-size: 14pt;
+            }
+            .match {
+                font-size: 11pt;
+                line-height: 1.4;
+            }
+            .bracket {
+                display: block;
+                overflow: visible;
+            }
+            .bracket-round {
+                break-inside: avoid;
+                margin-bottom: 16px;
+                min-width: 0;
+            }
+            .bracket-match {
+                margin-bottom: 8px;
+                border: 1px solid #777;
+                background: white;
+                white-space: pre-line;
+            }
+            .print-footer {
+                display: block;
+                margin-top: 18px;
+                color: #555;
+                font-size: 9pt;
+                text-align: right;
+            }
+        }
     </style>
 </head>
 <body data-page="pairing">
 <main>
+    <p class="back-link"><a href="leaderboard.html">Back to leaderboard</a></p>
     <h1 id="pageTitle">Tournament Pairings</h1>
     <p id="tournamentInfo"></p>
     <p id="message" class="message" role="status" aria-live="polite"></p>
     <section id="controls" class="controls"></section>
     <section id="rounds" class="rounds"></section>
     <section id="bracket" class="bracket" aria-label="Tournament bracket"></section>
-    <p><a href="leaderboard.html">Back to leaderboard</a></p>
+    <p class="print-footer"></p>
 </main>
 <script src="tournament.js"></script>
 </body>

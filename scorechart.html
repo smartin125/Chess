@@ -62,10 +62,18 @@
             margin: 0 8px 16px 0;
             padding: 8px;
         }
+        .back-link {
+            margin: 0 0 16px;
+        }
+        .back-link a {
+            color: #212d30;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body data-page="scores">
 <main>
+    <p class="back-link"><a href="leaderboard.html">Back to leaderboard</a></p>
     <h1 id="pageTitle">Score Round</h1>
     <p id="message" class="message" role="status" aria-live="polite"></p>
     <label id="teamSelectorLabel" for="teamSelector" hidden>Show team:</label>
@@ -82,7 +90,6 @@
             <tbody id="scoreBody"></tbody>
         </table>
     </div>
-    <p><a href="leaderboard.html">Back to leaderboard</a></p>
 </main>
 <script src="tournament.js"></script>
 </body>

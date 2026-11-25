@@ -47,6 +47,17 @@
             opacity: 0.75;
         }
 
+        .back-link {
+            position: absolute;
+            top: 20px;
+            left: 24px;
+            margin: 0;
+        }
+        .back-link a {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
         h1 {
             margin-top: 0;
             text-align: center;
@@ -185,12 +196,14 @@
 <body data-page="leaderboard">
 
 <div class="container">
+    <p class="back-link"><a href="index.html">Back to home</a></p>
     <a class="settings-link" href="tournamentsettings.html" aria-label="Tournament settings" title="Tournament settings">&#9881;</a>
     <h1 id="leaderboardTitle">Leaderboard</h1>
 
     <div id="tournamentActions" class="tournament-actions" hidden>
         <button type="button" onclick="window.location.href='pairing.html'">New Round</button>
         <button type="button" onclick="window.location.href='scorechart.html'">Score Round</button>
+        <button type="button" onclick="exportTournament()">Export Tournament</button>
     </div>
     
     <div class="form-group">
@@ -240,14 +253,161 @@
     // Initial render
     renderLeaderboard();
 
+    function exportTournament() {
+        if (!currentTournament) {
+            document.getElementById('errorMsg').textContent = 'There is no active tournament to export.';
+            return;
+        }
+
+        const tournamentStateKey = `tournamentState:${encodeURIComponent(currentTournament.name)}:${currentTournament.category}:${currentTournament.type}`;
+        const tournamentState = JSON.parse(localStorage.getItem(tournamentStateKey) || 'null');
+        const payload = {
+            format: 'ChessTournamentExport',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            tournament: currentTournament,
+            competitors: JSON.parse(localStorage.getItem(storageKey) || '[]'),
+            tournamentStateKey,
+            tournamentState
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeName = currentTournament.name.replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'tournament';
+        link.href = url;
+        link.download = `${safeName}-tournament.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
+
     function renderLeaderboard() {
         if (isTeamLeaderboard) {
             players.forEach(team => {
                 team.score = team.members.reduce((total, member) => total + member.score, 0);
             });
         }
-        // Sort players descending by score
-        players.sort((a, b) => b.score - a.score);
+        const tournamentStateKey = currentTournament
+            ? `tournamentState:${encodeURIComponent(currentTournament.name)}:${currentTournament.category}:${currentTournament.type}`
+            : '';
+        const tournamentState = tournamentStateKey
+            ? JSON.parse(localStorage.getItem(tournamentStateKey) || 'null')
+            : null;
+        const stateRounds = tournamentState?.rounds || [];
+        const stateResults = tournamentState?.results || {};
+        const selectedIds = Array.isArray(currentTournament?.tiebreaks) ? currentTournament.tiebreaks : [];
+
+        function opponentNames(name) {
+            const opponents = [];
+            stateRounds.forEach(round => {
+                if (round.bye === name) return;
+                round.matches.forEach(match => {
+                    if (match.a === name && match.b) opponents.push(match.b);
+                    if (match.b === name && match.a) opponents.push(match.a);
+                });
+            });
+            return [...new Set(opponents)];
+        }
+
+        function resultFor(roundIndex, matchIndex, boardIndex, name, match) {
+            const key = `${roundIndex}:${matchIndex}:${boardIndex}`;
+            const result = stateResults[key] || '';
+            if (!result) return '';
+            return match.a === name ? result
+                : match.b === name ? (result === 'win' ? 'loss' : result === 'loss' ? 'win' : result)
+                : '';
+        }
+
+        function buchholz(name) {
+            const scores = Object.fromEntries(players.map(player => [player.name, Number(player.score) || 0]));
+            return opponentNames(name).reduce((total, opponent) => total + (scores[opponent] || 0), 0);
+        }
+
+        function median(name) {
+            const scores = Object.fromEntries(players.map(player => [player.name, Number(player.score) || 0]));
+            const opponentScores = opponentNames(name).map(opponent => scores[opponent] || 0).sort((a, b) => b - a);
+            if (opponentScores.length < 2) return opponentScores.reduce((total, score) => total + score, 0);
+            opponentScores.shift();
+            opponentScores.pop();
+            return opponentScores.reduce((total, score) => total + score, 0);
+        }
+
+        function sonnebornBerger(name) {
+            const scores = Object.fromEntries(players.map(player => [player.name, Number(player.score) || 0]));
+            let total = 0;
+            stateRounds.forEach((round, roundIndex) => {
+                round.matches.forEach((match, matchIndex) => {
+                    if (match.a !== name && match.b !== name) return;
+                    const opponent = match.a === name ? match.b : match.a;
+                    if (!opponent) return;
+                    const boardCount = isTeamLeaderboard
+                        ? Math.min(match.a ? (players.find(player => player.name === match.a)?.members.length || 0) : 0,
+                            match.b ? (players.find(player => player.name === match.b)?.members.length || 0) : 0)
+                        : 1;
+                    for (let board = 0; board < boardCount; board++) {
+                        const result = resultFor(roundIndex, matchIndex, board, name, match);
+                        if (result === 'win') total += scores[opponent] || 0;
+                        if (result === 'draw') total += (scores[opponent] || 0) / 2;
+                    }
+                });
+            });
+            return total;
+        }
+
+        function directEncounter(name, opponent) {
+            let total = 0;
+            stateRounds.forEach((round, roundIndex) => {
+                round.matches.forEach((match, matchIndex) => {
+                    if (!((match.a === name && match.b === opponent) || (match.a === opponent && match.b === name))) return;
+                    const boardCount = isTeamLeaderboard
+                        ? Math.min(match.a ? (players.find(player => player.name === match.a)?.members.length || 0) : 0,
+                            match.b ? (players.find(player => player.name === match.b)?.members.length || 0) : 0)
+                        : 1;
+                    for (let board = 0; board < boardCount; board++) {
+                        const result = resultFor(roundIndex, matchIndex, board, name, match);
+                        total += result === 'win' ? 1 : result === 'draw' ? 0.5 : 0;
+                    }
+                });
+            });
+            return total;
+        }
+
+        function blackPieceWins(name) {
+            if (isTeamLeaderboard) return 0;
+            let total = 0;
+            stateRounds.forEach((round, roundIndex) => {
+                round.matches.forEach((match, matchIndex) => {
+                    if (match.black !== name) return;
+                    const key = `${roundIndex}:${matchIndex}:0`;
+                    const result = stateResults[key] || '';
+                    const viewedResult = match.a === name ? result
+                        : match.b === name ? (result === 'win' ? 'loss' : result === 'loss' ? 'win' : result)
+                        : '';
+                    if (viewedResult === 'win') total++;
+                });
+            });
+            return total;
+        }
+
+        function tiebreakValue(name, opponent, id) {
+            if (id === 'buchholz') return buchholz(name);
+            if (id === 'median') return median(name);
+            if (id === 'sonnebornBerger') return sonnebornBerger(name);
+            if (id === 'directEncounter') return directEncounter(name, opponent);
+            if (id === 'blackPieces') return blackPieceWins(name);
+            return 0;
+        }
+
+        // Sort players descending by score, then in selected tiebreak priority order.
+        players.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            for (const id of selectedIds) {
+                const difference = tiebreakValue(b.name, a.name, id) - tiebreakValue(a.name, b.name, id);
+                if (difference !== 0) return difference;
+            }
+            return a.name.localeCompare(b.name);
+        });
         
         // Save to localStorage
         localStorage.setItem(storageKey, JSON.stringify(players));

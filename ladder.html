@@ -55,6 +55,11 @@
         button:hover {
             background-color: #5c8084;
         }
+        .ladder-actions {
+            max-width: 1200px;
+            margin: 0 auto 12px;
+            text-align: right;
+        }
         .form-group {
             margin-bottom: 15px;
         }
@@ -67,6 +72,11 @@
     </style>
 </head>
 <body>
+<p class="back-link"><a href="index.html">Back to home</a></p>
+
+<div class="ladder-actions">
+    <button type="button" id="exportBtn">Export Tournament</button>
+</div>
 
 <div class="container">
     <!-- Left Panel: Match Results Entry -->
@@ -184,6 +194,32 @@
     }
 
     // --- Storage Helpers ---
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        const tournament = {
+            name: 'Ladder Tournament',
+            category: 'individual',
+            type: 'Ladder'
+        };
+        const payload = {
+            format: 'ChessTournamentExport',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            tournament,
+            competitors: ladder.map((name, index) => ({ name, score: index + 1 })),
+            ladderData: ladder,
+            matchHistory: matches
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ladder-tournament.json';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    });
+
     function saveData() {
         localStorage.setItem('ladderData', JSON.stringify(ladder));
         localStorage.setItem('matchHistory', JSON.stringify(matches));

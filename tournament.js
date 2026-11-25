@@ -118,11 +118,130 @@
         return total;
     }
 
+    function matchResultFor(state, roundIndex, matchIndex, boardIndex, name, match) {
+        const result = getResult(state, roundIndex, matchIndex, boardIndex);
+        if (!result) return '';
+        return teamMode
+            ? match.a === name ? result : match.b === name ? opposingResult(result) : ''
+            : match.a === name ? result : match.b === name ? opposingResult(result) : '';
+    }
+
+    function baselinePoints(name) {
+        const baseline = stateBaseline();
+        if (!teamMode) return Number(baseline[name]) || 0;
+        const team = competitors().find(candidate => candidate.name === name);
+        return team?.members?.reduce((total, member, index) => {
+            const key = `${name}|${index}`;
+            const value = Object.prototype.hasOwnProperty.call(baseline, key)
+                ? baseline[key]
+                : member.score;
+            return total + (Number(value) || 0);
+        }, 0) || 0;
+    }
+
+    let activeState = null;
+
+    function stateBaseline() {
+        return activeState?.baseline || createState().baseline;
+    }
+
+    function finalPoints(state, name) {
+        activeState = state;
+        return baselinePoints(name) + participantPoints(state, name);
+    }
+
+    function opponents(state, name) {
+        const found = [];
+        state.rounds.forEach(round => {
+            if (round.bye === name) return;
+            round.matches.forEach(match => {
+                if (match.a === name && match.b) found.push(match.b);
+                if (match.b === name && match.a) found.push(match.a);
+            });
+        });
+        return found;
+    }
+
+    function buchholz(state, name) {
+        return opponents(state, name).reduce((total, opponent) => total + finalPoints(state, opponent), 0);
+    }
+
+    function median(state, name) {
+        const scores = opponents(state, name).map(opponent => finalPoints(state, opponent)).sort((a, b) => b - a);
+        if (scores.length < 2) return scores.reduce((total, score) => total + score, 0);
+        scores.shift();
+        scores.pop();
+        return scores.reduce((total, score) => total + score, 0);
+    }
+
+    function sonnebornBerger(state, name) {
+        let total = 0;
+        state.rounds.forEach((round, roundIndex) => {
+            round.matches.forEach((match, matchIndex) => {
+                if (match.a !== name && match.b !== name) return;
+                const opponent = match.a === name ? match.b : match.a;
+                if (!opponent) return;
+                for (let board = 0; board < boardCount(match); board++) {
+                    const result = matchResultFor(state, roundIndex, matchIndex, board, name, match);
+                    if (result === 'win') total += finalPoints(state, opponent);
+                    if (result === 'draw') total += finalPoints(state, opponent) / 2;
+                }
+            });
+        });
+        return total;
+    }
+
+    function directEncounter(state, name, opponent) {
+        let total = 0;
+        state.rounds.forEach((round, roundIndex) => {
+            round.matches.forEach((match, matchIndex) => {
+                if (!((match.a === name && match.b === opponent) || (match.a === opponent && match.b === name))) return;
+                for (let board = 0; board < boardCount(match); board++) {
+                    const result = matchResultFor(state, roundIndex, matchIndex, board, name, match);
+                    total += points(result);
+                }
+            });
+        });
+        return total;
+    }
+
+    function blackWins(state, name) {
+        if (teamMode) return 0;
+        let total = 0;
+        state.rounds.forEach((round, roundIndex) => {
+            round.matches.forEach((match, matchIndex) => {
+                if (match.black !== name) return;
+                const result = getResult(state, roundIndex, matchIndex, 0);
+                if (match.a === name && result === 'win') total++;
+                if (match.b === name && result === 'loss') total++;
+            });
+        });
+        return total;
+    }
+
+    function tiebreakValue(state, name, opponent, id) {
+        if (id === 'buchholz') return buchholz(state, name);
+        if (id === 'median') return median(state, name);
+        if (id === 'sonnebornBerger') return sonnebornBerger(state, name);
+        if (id === 'directEncounter') return directEncounter(state, name, opponent);
+        if (id === 'blackPieces') return blackWins(state, name);
+        return 0;
+    }
+
     function standings(state) {
-        return names().map(name => ({
+        const entries = names().map(name => ({
             name,
-            points: participantPoints(state, name)
-        })).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+            points: finalPoints(state, name)
+        }));
+        const selectedIds = Array.isArray(tournament?.tiebreaks) ? tournament.tiebreaks : [];
+        return entries.sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            for (const id of selectedIds) {
+                const difference = tiebreakValue(state, b.name, a.name, id) - tiebreakValue(state, a.name, b.name, id);
+                if (difference !== 0) return difference;
+            }
+            return a.name.localeCompare(b.name);
+        });
     }
 
     function findSwissBye(state, orderedNames) {
@@ -190,7 +309,7 @@
                     (match.a === candidate && match.b === first))));
             if (opponentIndex === -1) opponentIndex = 0;
             const match = { a: first, b: available.splice(opponentIndex, 1)[0] };
-            if (!teamMode) assignSwissColors(match, colorCounts, state.rounds.length, matches.length);
+            assignSwissColors(match, colorCounts, state.rounds.length, matches.length);
             matches.push(match);
         }
         state.rounds.push({ matches, bye });
@@ -210,7 +329,13 @@
                 if (!first || !second) {
                     bye = first || second;
                 } else {
-                    matches.push({ a: first, b: second });
+                    const firstIsWhite = (roundIndex + index) % 2 === 0;
+                    matches.push({
+                        a: first,
+                        b: second,
+                        white: firstIsWhite ? first : second,
+                        black: firstIsWhite ? second : first
+                    });
                 }
             }
             rounds.push({ matches, bye });
@@ -298,7 +423,7 @@
             round.matches.forEach(match => {
                 const item = document.createElement('p');
                 item.className = 'match';
-                item.textContent = !teamMode && tournamentType === 'SwissSystem' && match.white
+                item.textContent = match.white && match.black
                     ? `${match.white} (White) vs ${match.black} (Black)`
                     : `${match.a} vs ${match.b}`;
                 section.appendChild(item);
@@ -421,7 +546,129 @@
         if (state.rounds.length) {
             if (tournamentType === 'Knockout') renderBracket(state);
             else renderRoundList(state);
+
+            const exportButton = document.createElement('button');
+            exportButton.type = 'button';
+            exportButton.textContent = 'Export Pairings as PDF';
+            exportButton.addEventListener('click', () => exportPairingsPdf(state));
+            controls.appendChild(exportButton);
         }
+    }
+
+    function pdfSafeText(text) {
+        return String(text)
+            .normalize('NFKD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\x20-\x7E]/g, '?')
+            .replace(/\\/g, '\\\\')
+            .replace(/\(/g, '\\(')
+            .replace(/\)/g, '\\)');
+    }
+
+    function wrapPdfLine(text, width = 88) {
+        const words = String(text).split(/\s+/);
+        const lines = [];
+        let line = '';
+        words.forEach(word => {
+            if ((line + (line ? ' ' : '') + word).length <= width) {
+                line += (line ? ' ' : '') + word;
+            } else {
+                if (line) lines.push(line);
+                line = word;
+            }
+        });
+        if (line) lines.push(line);
+        return lines;
+    }
+
+    function exportPairingsPdf(state) {
+        const lines = [
+            `${tournament.name} Pairings`,
+            `${teamMode ? 'Team' : 'Individual'} ${tournamentType} tournament`,
+            ''
+        ];
+
+        state.rounds.forEach((round, roundIndex) => {
+            const roundTitle = tournamentType === 'Knockout' && roundIndex === state.rounds.length - 1
+                ? 'Final'
+                : `Round ${roundIndex + 1}`;
+            lines.push(roundTitle);
+
+            round.matches.forEach((match, matchIndex) => {
+                if (!match.a && !match.b) return;
+                const pairing = match.white && match.black
+                    ? `${match.white} (White) vs ${match.black} (Black)`
+                    : `${match.a || '—'} vs ${match.b || '—'}`;
+                lines.push(`${matchIndex + 1}. ${pairing}`);
+            });
+
+            if (round.bye) lines.push(`Bye: ${round.bye}`);
+            lines.push('');
+        });
+
+        const wrappedLines = [];
+        lines.forEach(line => {
+            const parts = wrapPdfLine(line);
+            wrappedLines.push(...(parts.length ? parts : ['']));
+        });
+
+        const pageLines = [];
+        for (let index = 0; index < wrappedLines.length; index += 48) {
+            pageLines.push(wrappedLines.slice(index, index + 48));
+        }
+        if (!pageLines.length) pageLines.push(['No pairings']);
+
+        let pdf = '%PDF-1.4\n';
+        const objects = [];
+        objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+
+        const pageRefs = pageLines.map((_, index) => `${4 + index * 2} 0 R`);
+        objects[2] = `<< /Type /Pages /Kids [${pageRefs.join(' ')}] /Count ${pageLines.length} >>`;
+        objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+
+        pageLines.forEach((pageContent, pageIndex) => {
+            const pageObjectId = 4 + pageIndex * 2;
+            const contentObjectId = pageObjectId + 1;
+            const textCommands = pageContent.map((line, lineIndex) => {
+                const y = 790 - lineIndex * 15;
+                const prefix = lineIndex === 0 ? 'BT' : '';
+                return `${prefix}${prefix ? ' ' : ''}/F1 11 Tf 50 ${y} Td (${pdfSafeText(line)}) Tj`;
+            }).join('\n');
+            const stream = `BT\n/F1 11 Tf\n50 790 Td\n14 TL\n` +
+                pageContent.map((line, lineIndex) =>
+                    `${lineIndex === 0 ? '' : 'T* '}(${pdfSafeText(line)}) Tj`
+                ).join('\n') + '\nET';
+
+            objects[pageObjectId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObjectId} 0 R >>`;
+            objects[contentObjectId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+        });
+
+        const offsets = [0];
+        for (let objectId = 1; objectId < objects.length; objectId++) {
+            if (!objects[objectId]) continue;
+            offsets[objectId] = pdf.length;
+            pdf += `${objectId} 0 obj\n${objects[objectId]}\nendobj\n`;
+        }
+
+        const xrefOffset = pdf.length;
+        const maxObjectId = objects.length - 1;
+        pdf += `xref\n0 ${maxObjectId + 1}\n`;
+        pdf += '0000000000 65535 f \n';
+        for (let objectId = 1; objectId <= maxObjectId; objectId++) {
+            pdf += `${objects[objectId] ? String(offsets[objectId]).padStart(10, '0') : '0000000000'} 00000 n \n`;
+        }
+        pdf += `trailer\n<< /Size ${maxObjectId + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+        const blob = new Blob([pdf], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeName = tournament.name.replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'tournament';
+        link.href = url;
+        link.download = `${safeName}-pairings.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
     }
 
     function findMatch(round, name) {
@@ -432,7 +679,7 @@
         const cell = document.createElement('td');
         const opponentLabel = document.createElement('div');
         opponentLabel.className = 'opponent';
-        const color = !teamMode && tournamentType === 'SwissSystem' && match.white
+        const color = match.white && match.black
             ? match.white === viewedName ? 'White' : 'Black'
             : '';
         opponentLabel.textContent = opponent ? `vs ${opponent}${color ? ` (${color})` : ''}` : 'No opponent';

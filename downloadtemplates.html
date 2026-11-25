@@ -11,6 +11,7 @@
     <style>
 
 body {
+  position: relative;
   display: flex;
   flex-direction: column; /* <-- THIS moves "Choose Template" to the top! */
   align-items: center;    /* Centers the title and buttons horizontally */
@@ -50,9 +51,20 @@ h1 {
         button:hover {
             background-color: #5c8084;
         }
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            margin: 0;
+        }
+        .back-link a {
+            color: #212d30;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
+<p class="back-link"><a href="index.html">Back to home</a></p>
 
     <!-- No external script tags needed -->
     <button id="download-btn">Download Individual Tournament Setup Template</button>

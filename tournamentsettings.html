@@ -65,6 +65,14 @@
         .tiebreak-option label {
             flex: 1;
         }
+        .tiebreak-description {
+            display: block;
+            margin-top: 4px;
+            color: #52676a;
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.35;
+        }
         .drag-handle {
             box-sizing: border-box;
             display: flex;
@@ -88,20 +96,82 @@
         .message {
             min-height: 1.5em;
         }
+        .back-link {
+            margin: 0 0 16px;
+        }
+        .back-link a {
+            color: #212d30;
+            font-weight: bold;
+        }
+        .tiebreak-heading {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .info-button {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: 1px solid #212d30;
+            border-radius: 50%;
+            background: #dae3e7;
+            color: #212d30;
+            cursor: pointer;
+            font: bold 16px Georgia, serif;
+        }
+        .info-button:hover,
+        .info-button:focus-visible {
+            background: #212d30;
+            color: #dae3e7;
+            outline: none;
+        }
+        .tiebreak-info {
+            position: absolute;
+            z-index: 10;
+            top: 40px;
+            right: 0;
+            width: min(360px, calc(100vw - 96px));
+            padding: 14px;
+            border: 1px solid #212d30;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(33, 45, 48, 0.18);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+        .tiebreak-info[hidden] {
+            display: none;
+        }
+        .tiebreak-info p {
+            margin: 0 0 8px;
+        }
+        .tiebreak-info p:last-child {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
 <main>
+    <p class="back-link"><a id="leaderboardLink" href="leaderboard.html">Back to leaderboard</a></p>
     <h1 id="pageTitle">Tournament Settings</h1>
     <p id="message" class="message" role="status" aria-live="polite"></p>
     <section aria-labelledby="tiebreakHeading">
-        <h2 id="tiebreakHeading">Tiebreaks</h2>
+        <div class="tiebreak-heading">
+            <h2 id="tiebreakHeading">Tiebreaks</h2>
+            <button type="button" id="tiebreakInfoButton" class="info-button" aria-label="How tiebreak options work" aria-expanded="false" aria-controls="tiebreakInfo">i</button>
+            <div id="tiebreakInfo" class="tiebreak-info" role="dialog" aria-label="Tiebreak instructions" hidden>
+                <p><strong>Selection:</strong> Check an option to use it when two or more players have the same score.</p>
+                <p><strong>Priority:</strong> Drag selected options to put the strongest tiebreak first. Tiebreaks are applied from top to bottom until players are separated.</p>
+                <p>If the full tiebreak order still leaves a tie, player names are used to make the final ordering stable.</p>
+            </div>
+        </div>
         <fieldset id="tiebreakOptions">
             <legend>Select tiebreaks and drag to change the application order</legend>
             <div id="tiebreakList"></div>
         </fieldset>
     </section>
-    <p><a id="leaderboardLink" href="leaderboard.html">Back to leaderboard</a></p>
 </main>
 <script>
     const tournament = JSON.parse(localStorage.getItem('currentTournament') || 'null');
@@ -112,7 +182,11 @@
         { id: 'directEncounter', label: 'Direct Encounter', types: ['SwissSystem', 'RoundRobin'] },
         { id: 'blackPieces', label: 'Black Pieces', types: ['SwissSystem'] }
     ];
-    const availableOptions = options.filter(option => tournament && option.types.includes(tournament.type));
+    const availableOptions = options.filter(option =>
+        tournament
+        && option.types.includes(tournament.type)
+        && (tournament.category !== 'team' || option.id !== 'blackPieces')
+    );
     let selectedIds = [...new Set(Array.isArray(tournament?.tiebreaks) ? tournament.tiebreaks : [])]
         .filter(id => availableOptions.some(option => option.id === id));
     const optionsContainer = document.getElementById('tiebreakList');
@@ -125,6 +199,28 @@
     if (tournament?.category === 'team') {
         document.getElementById('leaderboardLink').href = 'leaderboard.html?mode=team';
     }
+
+    const tiebreakInfoButton = document.getElementById('tiebreakInfoButton');
+    const tiebreakInfo = document.getElementById('tiebreakInfo');
+
+    function setTiebreakInfoOpen(open) {
+        tiebreakInfo.hidden = !open;
+        tiebreakInfoButton.setAttribute('aria-expanded', String(open));
+    }
+
+    tiebreakInfoButton.addEventListener('click', () => {
+        setTiebreakInfoOpen(tiebreakInfo.hidden);
+    });
+
+    document.addEventListener('click', event => {
+        if (!tiebreakInfo.hidden && !tiebreakInfo.contains(event.target) && event.target !== tiebreakInfoButton) {
+            setTiebreakInfoOpen(false);
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') setTiebreakInfoOpen(false);
+    });
 
     function saveSelectedTiebreaks() {
         if (!tournament) return;
@@ -147,9 +243,16 @@
 
     function renderTiebreaks() {
         optionsContainer.replaceChildren();
+        const descriptions = {
+            buchholz: 'Sums the final scores of all opponents the player faced.',
+            median: "Adds opponents' final scores, then removes the single highest and single lowest scores.",
+            sonnebornBerger: 'Adds full points of defeated opponents and half points of drawn opponents.',
+            directEncounter: 'Compares head-to-head results between tied players.',
+            blackPieces: 'Ranks by total wins with the Black pieces. Best used as a secondary tiebreak.'
+        };
         const orderedOptions = [
-            ...selectedIds.map(id => options.find(option => option.id === id)),
-            ...options.filter(option => !selectedIds.includes(option.id))
+            ...selectedIds.map(id => availableOptions.find(option => option.id === id)).filter(Boolean),
+            ...availableOptions.filter(option => !selectedIds.includes(option.id))
         ];
 
         orderedOptions.forEach(option => {
@@ -190,7 +293,11 @@
                 saveSelectedTiebreaks();
                 renderTiebreaks();
             });
-            label.append(checkbox, document.createTextNode(option.label));
+            const description = document.createElement('small');
+            description.className = 'tiebreak-description';
+            description.textContent = descriptions[option.id];
+            label.append(checkbox, document.createElement('span'));
+            label.lastElementChild.append(document.createTextNode(option.label), description);
             row.appendChild(label);
             row.addEventListener('dragstart', event => {
                 draggedTiebreakId = option.id;
