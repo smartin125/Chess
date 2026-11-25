@@ -1,25 +1,47 @@
-const CACHE_NAME = 'site-cache-v1';
-// List every file your site needs to work offline
+const CACHE_NAME = 'chess-offline-v2';
 const ASSETS = [
-  './',
   './index.html',
-  './style.css',
-  './app.js',
+  './ladder.html',
+  './leaderboard.html',
+  './scorechart.html',
+  './tournamentsetup.html',
+  './tournamentsettings.html',
+  './downloadtemplates.html',
+  './pairing.html',
+  './tournament.js',
+  './manifest.json',
   './icon-192.png'
 ];
 
-// Install event: caches all listed files
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
-// Fetch event: serves cached files when offline
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
+        cacheNames
+          .filter((cacheName) =>
+            cacheName === 'site-cache-v1' ||
+            (cacheName.startsWith('chess-offline-') && cacheName !== CACHE_NAME)
+          )
+          .map((cacheName) => caches.delete(cacheName))
+      )
+    )
+  );
+});
+
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    caches.match(event.request, { ignoreSearch: true }).then((response) =>
+      response || fetch(event.request)
+    )
   );
 });
