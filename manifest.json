@@ -1,5 +1,5 @@
 {
-  "name": "Chess20",
+  "name": "Dolphin Chess Manager",
   "short_name": "OfflineApp",
   "start_url": "./index.html",
   "display": "standalone",
