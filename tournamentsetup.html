@@ -210,7 +210,7 @@
 
         const reader = new FileReader();
         
-        // Read file as plain text
+
         reader.onload = function(e) {
             const text = e.target.result;
             const data = parseCSV(text);
@@ -256,20 +256,19 @@
         return rows;
     }
 
-    // Constructs the HTML table elements dynamically
     function generateTable(data) {
         if (data.length === 0) return;
 
         let tableHtml = '<table>';
 
-        // 1. Generate Table Header (First row of CSV)
+
         tableHtml += '<thead><tr>';
         data[0].forEach(headerText => {
             tableHtml += `<th>${escapeHtml(headerText)}</th>`;
         });
         tableHtml += '</tr></thead>';
 
-        // 2. Generate Table Body (Remaining rows)
+
         tableHtml += '<tbody>';
         for (let i = 1; i < data.length; i++) {
             tableHtml += '<tr>';
@@ -280,11 +279,11 @@
         }
         tableHtml += '</tbody></table>';
 
-        // Inject generated HTML block into the placeholder container
+
         tableContainer.innerHTML = tableHtml;
     }
 
-    // Helper function to sanitize string and prevent HTML injection/XSS flaws
+
     function escapeHtml(string) {
         return String(string).replace(/[&<>"']/g, function(s) {
             return {

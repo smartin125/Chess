@@ -14,8 +14,8 @@
 body {
   position: relative;
   display: flex;
-  flex-direction: column; /* <-- THIS moves "Choose Template" to the top! */
-  align-items: center;    /* Centers the title and buttons horizontally */
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   min-height: 100vh;
   margin: 0;
@@ -23,7 +23,7 @@ body {
 }
 
 h1 {
-  margin-bottom: 40px;    /* Space between the title and the buttons */
+  margin-bottom: 40px;
   text-align: center;
 }
         body {
@@ -67,32 +67,24 @@ h1 {
 <body>
 <p class="back-link"><a href="index.html">Back to home</a></p>
 
-    <!-- No external script tags needed -->
     <button id="download-btn">Download Individual Tournament Setup Template</button>
 
     <script>
         document.getElementById('download-btn').addEventListener('click', function() {
             try {
-                // 1. Create your rows. Each array item is a row, elements separated by commas.
-                // We add the standard UTF-8 Byte Order Mark (\uFEFF) to ensure Excel reads special characters properly.
                 const csvContent = "\uFEFF" + [
                     "Name",
                     "Sam",
                     "Owen"
                 ].join("\n");
 
-                // 2. Convert the text data into a secure raw data Blob
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                
-                // 3. Create a temporary invisible link element in memory
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
                 
                 link.setAttribute("href", url);
-                link.setAttribute("download", "IndividualTournamentTemplate.csv"); // Saves cleanly as a spreadsheet file
+                link.setAttribute("download", "IndividualTournamentTemplate.csv");
                 link.style.visibility = 'hidden';
-                
-                // 4. Force the browser to click the link and trigger the download
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -108,26 +100,18 @@ h1 {
     <script>
         document.getElementById('downloadteam-btn').addEventListener('click', function() {
             try {
-                // 1. Create your rows. Each array item is a row, elements separated by commas.
-                // We add the standard UTF-8 Byte Order Mark (\uFEFF) to ensure Excel reads special characters properly.
                 const csvContent = "\uFEFF" + [
                     "Team,Player 1,Player 2,Player 3,Player 4",
                     "Team A,Sam,Owen,Alex,Jordan",
                     "Team B,Casey,Taylor,Morgan,Riley"
                 ].join("\n");
-
-                // 2. Convert the text data into a secure raw data Blob
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                
-                // 3. Create a temporary invisible link element in memory
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
                 
                 link.setAttribute("href", url);
-                link.setAttribute("download", "TeamsTournamentTemplate.csv"); // Saves cleanly as a spreadsheet file
+                link.setAttribute("download", "TeamsTournamentTemplate.csv");
                 link.style.visibility = 'hidden';
-                
-                // 4. Force the browser to click the link and trigger the download
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);

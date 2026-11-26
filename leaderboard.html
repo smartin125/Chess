@@ -251,7 +251,7 @@
         document.getElementById('leaderboardTitle').textContent = `${currentTournament.name} Leaderboard`;
     }
 
-    // Initial render
+
     renderLeaderboard();
 
     function exportTournament() {
@@ -400,7 +400,6 @@
             return 0;
         }
 
-        // Sort players descending by score, then in selected tiebreak priority order.
         players.sort((a, b) => {
             if (b.score !== a.score) return b.score - a.score;
             for (const id of selectedIds) {
@@ -410,7 +409,7 @@
             return a.name.localeCompare(b.name);
         });
         
-        // Save to localStorage
+
         localStorage.setItem(storageKey, JSON.stringify(players));
 
         const tbody = document.getElementById('leaderboardBody');
@@ -493,7 +492,7 @@
         const errorMsg = document.getElementById('errorMsg');
         
         const name = nameInput.value.trim();
-        // Default to 0 if left blank
+
         const score = scoreInput.value === '' ? 0 : parseInt(scoreInput.value, 10);
 
         errorMsg.textContent = '';
@@ -503,14 +502,14 @@
             return;
         }
 
-        // Check for duplicate names (case-insensitive)
+
         const nameExists = players.some(p => p.name.toLowerCase() === name.toLowerCase());
         if (nameExists) {
             errorMsg.textContent = 'This player name already exists.';
             return;
         }
 
-        // Add player and reset form
+
         players.push(isTeamLeaderboard ? { name, score, members: [] } : { name, score });
         nameInput.value = '';
         scoreInput.value = '';
