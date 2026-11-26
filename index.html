@@ -18,17 +18,19 @@
         }
   
     body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background-image: url("icon-192.png");
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: 370px; /* Adjust size as needed */
-      opacity: 0.15;          /* Controls watermark transparency */
-      pointer-events: none;   /* Lets users click/select text normally */
-      z-index: -1;            /* Places the watermark behind content */
-    }
+  content: "";
+  position: fixed;
+  width: 370px;
+  height: 370px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: url("icon-192.png") center / contain no-repeat;
+  clip-path: circle(50%);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: -1;
+}
 
         .content {
             display: flex;
@@ -39,7 +41,7 @@
 
         .site-title {
             margin: 0 0 clamp(30px, 3vw, 60px) 0;
-            font-size: clamp(44px, 3.5vw, 76px);   /* 👈 gentle scaling */
+            font-size: clamp(44px, 3.5vw, 76px);
             color: #212d30;
             font-weight: bold;
         }
@@ -47,7 +49,7 @@
         a:link {
             color: #dae3e7;
             text-decoration: none;
-            font-size: clamp(28px, 2.4vw, 48px);   /* 👈 gentle scaling */
+            font-size: clamp(28px, 2.4vw, 48px);
             font-weight: bold;
         }
 
